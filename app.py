@@ -5053,8 +5053,8 @@ def main():
         c[1].radio(t("Modo"), ["simple", "adv"], key="seg_ui_mode", horizontal=True, label_visibility="collapsed",
                    format_func=lambda v: t("Simple") if v == "simple" else t("Avanzado"), on_change=lambda: ST.put("mode", st.session_state["seg_ui_mode"]))
         c[2].button(t("Guía rápida"), key="btn_tour", on_click=tour_start)
-        c[3].button(t("Presentar"), key="btn_present", icon=":material/slideshow:", on_click=pres_start)
-        c[4].button(t("Personalizar"), key="btn_settings", icon=":material/settings:", on_click=open_drawer)
+        c[3].button(t("Presentar"), key="btn_present", on_click=pres_start)
+        c[4].button(t("Personalizar"), key="btn_settings", on_click=open_drawer)
         choice = wid(st.radio, t("Sección"), "nav", nav_opts[0], options=nav_opts, horizontal=True, label_visibility="collapsed", format_func=t)
     st.html(ui.connector_html())
     st.html(ui.engine_html(ui.ANIM), unsafe_allow_javascript=True)
