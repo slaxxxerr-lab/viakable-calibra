@@ -5026,7 +5026,7 @@ def main():
             st.session_state["nav"] = steps[0][0]
     ti = st.session_state.get("tour")
     hl = steps[ti][1] if ti is not None and 0 <= ti < len(steps) else ""
-    st.html(ui.css(cfg, hl, flip))
+    st.markdown(ui.css(cfg, hl, flip), unsafe_allow_html=True)
 
     if st.session_state.get("present"):                 # modo presentación: encabezado mínimo y una escena por paso
         with st.container(key="top"):
