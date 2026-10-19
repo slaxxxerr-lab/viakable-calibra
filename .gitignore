@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Streamlit secrets — NEVER commit (the .example template is fine)
+.streamlit/secrets.toml
+!.streamlit/secrets.toml.example
+
+# Databases — rebuilt automatically at runtime
+*.db
+*.sqlite
+*.sqlite3
+
+# Real sales data — never publish
+Viakable_Tons_Sales.xlsx
+Viakable_Tons_Sales.csv
+Viakable*.xlsx
+Viakable*.csv
+
+# Pytest / test caches
+.pytest_cache/
+.cache/
+
+# Mac / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Logs
+*.log
+streamlit.log.txt
+
+# Evaluation outputs (contain real data summaries)
+resultados_motor.json
+resultados_modelos.json
+
+# Mac launcher (not needed on the cloud)
+iniciar.command
+arreglar_openmp_mac.sh

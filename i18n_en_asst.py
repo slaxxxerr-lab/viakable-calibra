@@ -1,0 +1,55 @@
+"""Traducciones al inglés del asistente Calibra (sin IA externa)."""
+EN = {
+    "Asistente": "Assistant", "Asistente Calibra": "Calibra Assistant", "Escenario del asistente": "Assistant scenario", "Lo propuso el asistente y lo aplicaste tú.": "The assistant proposed it and you applied it.",
+    "pregunta al asistente": "assistant question", "asistente: escenario aplicado": "assistant: scenario applied",
+    "Pregunta en español o inglés sobre pronósticos, escenarios, precios, noticias, clientes y planes. No usa IA externa: entiende tu pregunta con reglas y contesta con las funciones reales de la app, así que cada cifra sale del motor.":
+        "Ask in Spanish or English about forecasts, scenarios, prices, news, customers and plans. It uses no external AI: it understands your question with rules and answers with the app's real functions, so every figure comes from the engine.",
+    "Lo que notó el asistente": "What the assistant noticed", "Observaciones en lenguaje sencillo, calculadas con el motor. Se actualizan con cada cambio.": "Plain-language observations computed by the engine. They update with every change.",
+    "Preguntar al asistente": "Ask the assistant", "Consultando el motor…": "Querying the engine…", "Precisión de validación": "Validation accuracy", "Evaluación": "Evaluation",
+    "No entendí bien la pregunta. ¿Quisiste decir alguna de estas?": "I did not quite understand the question. Did you mean one of these?", "No pude calcularlo: {x}": "I could not compute it: {x}",
+    "¿Qué quieres simular: el precio del cobre o del aluminio, el arancel, una señal de mercado o un pedido adicional?": "What do you want to simulate: the copper or aluminum price, the tariff, a market signal or an extra order?",
+    "¿De cuánto es el cambio {w}? Dime un porcentaje, por ejemplo 10%.": "How big is the change {w}? Give me a percentage, for example 10%.",
+    "el cobre": "copper", "el aluminio": "aluminum", "el arancel": "the tariff", "ese cambio": "that change", "El cobre": "Copper",
+    "¿De qué calibre es el pedido adicional? Por ejemplo, calibre 12.": "Which gauge is the extra order? For example, gauge 12.", "¿Cuántas toneladas por mes trae el pedido? Por ejemplo, 20 t.": "How many tons per month does the order bring? For example, 20 t.",
+    "¿Durante cuántos meses? Por ejemplo, 4 meses.": "For how many months? For example, 4 months.",
+    "del calibre {g}": "of gauge {g}", "de los calibres {g}": "of gauges {g}", "de todos los calibres": "of all gauges",
+    "Esperamos {v} {u} {s} en los próximos {h} meses (rango {a} a {b}), con el método {m} y {p}% de precisión de validación.": "We expect {v} {u} {s} over the next {h} months (range {a} to {b}), using the {m} method with {p}% validation accuracy.",
+    "Para {mes}: {v} {u} (rango {a} a {b}).": "For {mes}: {v} {u} (range {a} to {b}).", "Es {c}% {d} el mismo periodo del año anterior.": "That is {c}% {d} the same period last year.", "más que en": "above", "menos que en": "below",
+    "Con {d}, el pronóstico a {h} meses pasa de {a} a {b} {u} ({x}), el margen bruto de {m0} a {m1} ({dm}) y el costo del metal cambia {mc}.":
+        "With {d}, the {h}-month forecast goes from {a} to {b} {u} ({x}), gross margin from {m0} to {m1} ({dm}) and metal cost changes {mc}.",
+    "Tus datos no traen ventas de exportación definidas, así que el arancel no mueve nada; defínelas en Datos.": "Your data has no export sales defined, so the tariff moves nothing; define them in Data.",
+    "Es solo una simulación: pulsa Aplicar escenario si quieres usarla.": "This is only a simulation: click Apply scenario if you want to use it.",
+    "El pronóstico {s} de {h} meses es {b} {u}. Partiendo de {a} ({v} {u}), lo que más lo mueve: {f}.": "The {h}-month forecast {s} is {b} {u}. Starting from {a} ({v} {u}), what moves it most: {f}.",
+    "Ningún factor mueve el pronóstico {s}: es el pronóstico estadístico base de {v} {u}.": "No factor moves the forecast {s}: it is the base statistical forecast of {v} {u}.",
+    "Además, las ventas de los últimos 3 meses del calibre {g} están {c}% {d} mismo periodo del año anterior.": "Also, sales of gauge {g} over the last 3 months are {c}% {d} the same period last year.",
+    "por encima del": "above", "por debajo del": "below", "del cobre": "in copper", "del aluminio": "in aluminum", "del arancel": "in the tariff", "de ese cambio": "in that", "está en": "is at",
+    "Alertas: {n} en total, {k} urgentes. La más urgente: {x} Qué hacer: {a}": "Alerts: {n} in total, {k} urgent. The most urgent: {x} What to do: {a}",
+    "También hay {n} anomalías del ritmo de pedidos por revisar en Inicio.": "There are also {n} order-rhythm anomalies to review in Home.",
+    "No tengo precios disponibles ahora; la app usa los últimos guardados.": "I have no prices available right now; the app uses the last saved ones.", "Son los últimos precios guardados (sin conexión).": "These are the last saved prices (offline).",
+    "Todavía no hay noticias guardadas con ese filtro.": "There are no saved news items with that filter yet.", "La noticia más relevante: «{ti}» ({s}, {d}). Tema: {tp}; relevancia {rl}.": "The most relevant news item: \"{ti}\" ({s}, {d}). Topic: {tp}; relevance {rl}.",
+    "Qué hacer: {a}": "What to do: {a}", "Hay {n} noticias relevantes recientes; ninguna cambia el pronóstico sola.": "There are {n} recent relevant news items; none changes the forecast on its own.",
+    "Plan de {h} meses {s}: ingreso {r}, margen bruto {m} ({p}%), inventario de seguridad {ss} {u}. Necesitas {cu} {u} de cobre y {al} {u} de aluminio.":
+        "{h}-month plan {s}: revenue {r}, gross margin {m} ({p}%), safety stock {ss} {u}. You need {cu} {u} of copper and {al} {u} of aluminum.",
+    "Hay {n} meses por encima de la capacidad.": "There are {n} months above capacity.", "Ningún mes pasa de la capacidad.": "No month exceeds capacity.",
+    "Compra hoy {q} {u} de {m}: cubre {k} meses y la necesidad va de {a} a {b} {u}.": "Buy {q} {u} of {m} today: it covers {k} months and the need ranges from {a} to {b} {u}.",
+    "{c}: {a} {u} en los últimos 6 meses contra {b} en los 6 previos ({x}%).": "{c}: {a} {u} over the last 6 months versus {b} in the previous 6 ({x}%).", "Compra a la baja.": "Buying less.",
+    "{n} compran a la baja (más de 20% menos que en los 6 meses previos): {l}.": "{n} are buying less (more than 20% below the previous 6 months): {l}.", "Ningún cliente cae más de 20% contra los 6 meses previos.": "No customer is down more than 20% versus the previous 6 months.",
+    "El pipeline abierto es de {a} {u} ({b} {u} ponderadas).": "The open pipeline is {a} {u} ({b} {u} weighted).", "Tus datos no traen cliente; se usa la fuerza de venta.": "Your data has no customer column; the sales force is used.",
+    "Preparé el resumen del mes. {x} Abajo lo puedes descargar en PDF o Excel.": "I prepared the monthly summary. {x} You can download it below as PDF or Excel.",
+    "La precisión de validación del total es {p}% (error {e}%), medida contra meses reales con validación cruzada.": "Total validation accuracy is {p}% (error {e}%), measured against real months with cross-validation.",
+    "El calibre más preciso es el {a} ({pa}%) y el menos, el {b} ({pb}%).": "The most accurate gauge is {a} ({pa}%) and the least accurate is {b} ({pb}%).",
+    "En {n} simulaciones el margen esperado es {m}; en el peor 5% queda en {p} (margen en riesgo {r}) y hay {q}% de probabilidad de quedar bajo {u}.":
+        "In {n} simulations the expected margin is {m}; in the worst 5% it is {p} (margin at risk {r}) and there is a {q}% probability of falling below {u}.",
+    "Fijar {x}% de las compras deja el peor 5% en {y}.": "Fixing {x}% of purchases leaves the worst 5% at {y}.",
+    "Para {mes}, el modelo XGBoost espera {f} {u} desde una base de {b}. Lo que más lo sube: {a}. Lo que más lo baja: {d}.": "For {mes}, the XGBoost model expects {f} {u} from a base of {b}. What raises it most: {a}. What lowers it most: {d}.",
+    "Puedo contestar sobre: pronósticos por calibre y mercado, escenarios (precio del cobre o aluminio, arancel, señales, pedidos), por qué cambió el pronóstico, alertas, precios en vivo, noticias, plan y compra de metal, riesgo, clientes que compran menos, precisión y el resumen para la junta. Prueba con estas preguntas.":
+        "I can answer about: forecasts by gauge and market, scenarios (copper or aluminum price, tariff, signals, orders), why the forecast changed, alerts, live prices, news, plan and metal purchasing, risk, customers buying less, accuracy and the meeting summary. Try these questions.",
+    "Hola, soy el asistente de Calibra. Pregúntame por el pronóstico, un escenario, los precios, las noticias o lo que hay que atender.": "Hi, I am the Calibra assistant. Ask me about the forecast, a scenario, prices, news or what needs attention.",
+    "El calibre {g} vende {p}% {d} que hace un año (últimos 3 meses).": "Gauge {g} sells {p}% {d} than a year ago (last 3 months).", "más": "more", "menos": "less",
+    "El cobre {v} {p}% hoy; si se mantiene, el margen de 6 meses {e} unos {x} (estimado).": "Copper {v} {p}% today; if it holds, the 6-month margin {e} about {x} (estimate).",
+    "{c} compra {p}% menos que en los 6 meses previos.": "{c} buys {p}% less than in the previous 6 months.", "El pronóstico a {h} meses es {x} {u}, {c}% {d} mismo periodo del año pasado.": "The {h}-month forecast is {x} {u}, {c}% {d} the same period last year.",
+    "Hay {p}% de probabilidad de que el margen de {h} meses quede bajo {u}; en el peor 5% queda en {m}.": "There is a {p}% probability that the {h}-month margin falls below {u}; in the worst 5% it is {m}.",
+    "Tareas vencidas en el CRM: {n}.": "Overdue tasks in the CRM: {n}.",
+}
+EN.update({"Tus datos no tienen ventas de {m}, así que no hay pronóstico para ese mercado. Define la regla de exportación en Datos.": "Your data has no sales in {m}, so there is no forecast for that market. Define the export rule in Data."})
+EN.update({"cobre": "copper", "aluminio": "aluminum", "tipo de cambio": "exchange rate"})

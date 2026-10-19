@@ -1,0 +1,12 @@
+pandas
+numpy
+scikit-learn
+openpyxl
+streamlit
+plotly
+statsmodels>=0.14
+xgboost>=3.0
+pdfplumber>=0.11
+yfinance>=0.2
+requests
+feedparser>=6.0

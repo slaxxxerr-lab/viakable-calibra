@@ -1,0 +1,769 @@
+/* ═══════════════════════════════════════════════════════════════
+   Viakable Calibra — Design System
+   All custom HTML components + Streamlit widget overrides.
+   CSS variables (--bg, --fg, --muted, --line, --soft, --accent,
+   --red, --gray, --blue, --font, --base, --pad) are injected
+   dynamically by ui.py/css() ahead of this file.
+   ═══════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
+
+/* ── 1. Extra design tokens ────────────────────────────────── */
+:root {
+  --sp-1:4px;  --sp-2:8px;  --sp-3:12px; --sp-4:16px;
+  --sp-5:20px; --sp-6:24px; --sp-8:32px; --sp-12:48px;
+  --r-xs:4px;  --r-sm:6px;  --r-md:10px; --r-lg:16px; --r-xl:24px;
+  --sh-1:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
+  --sh-2:0 3px 10px rgba(0,0,0,.09),0 1px 4px rgba(0,0,0,.05);
+  --sh-3:0 8px 24px rgba(0,0,0,.10),0 2px 8px rgba(0,0,0,.06);
+  --text-xs:.75rem;   /* 12px */
+  --text-sm:.8125rem; /* 13px */
+  --text-md:.9375rem; /* 15px */
+  --text-lg:1.0625rem;/* 17px */
+  --text-xl:1.25rem;  /* 20px */
+  --text-2xl:1.5rem;  /* 24px */
+  --text-kpi:2rem;    /* 32px */
+  --dur-fast:140ms; --dur-med:240ms; --dur-slow:380ms;
+  --ease:cubic-bezier(.4,0,.2,1);
+  --col-ok:#16a34a;  --col-ok-bg:rgba(22,163,74,.10);
+  --col-warn:#d97706; --col-warn-bg:rgba(217,119,6,.10);
+  --col-info:var(--blue); --col-info-bg:rgba(72,179,246,.10);
+}
+
+/* ── 2. Base & global font ─────────────────────────────────── */
+*, *::before, *::after { box-sizing:border-box; }
+
+/* Apply brand font everywhere in the Streamlit app */
+.stApp, .stApp *, body { font-family:var(--font)!important; }
+.stApp { background:var(--bg)!important; }
+[data-testid="stMain"], .stMain { background:var(--bg)!important; }
+
+/* Remove Streamlit's massive default top margin */
+.stMain > div > div:first-child { padding-top:0!important; }
+[data-testid="block-container"] { padding-top:var(--sp-4)!important; padding-bottom:var(--sp-6)!important; }
+
+/* ── 3. Navigation — horizontal radio → pill tabs ──────────── */
+/* Outer row containing the nav */
+[data-testid="stHorizontalBlock"] { align-items:center!important; gap:var(--sp-3)!important; }
+
+/* The radio group itself */
+[data-testid="stRadio"] { margin:0!important; }
+[data-testid="stRadio"] > div { margin-bottom:0!important; }
+
+/* Flex row of labels */
+[data-testid="stRadio"] > div > div[role="radiogroup"],
+[data-testid="stRadio"] > div > div {
+  display:flex!important;
+  flex-wrap:wrap!important;
+  gap:4px!important;
+  background:var(--soft)!important;
+  border-radius:var(--r-lg)!important;
+  padding:4px!important;
+  border:1px solid var(--line)!important;
+}
+[data-testid="stRadio"] label {
+  cursor:pointer!important;
+  padding:6px var(--sp-4)!important;
+  border-radius:calc(var(--r-lg) - 3px)!important;
+  font-size:var(--text-sm)!important;
+  font-weight:500!important;
+  color:var(--muted)!important;
+  transition:background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease)!important;
+  white-space:nowrap!important;
+  line-height:1.5!important;
+  user-select:none!important;
+  letter-spacing:.01em!important;
+}
+[data-testid="stRadio"] label:hover {
+  background:rgba(128,128,128,.12)!important;
+  color:var(--fg)!important;
+}
+/* Selected tab */
+[data-testid="stRadio"] label:has(input:checked) {
+  background:var(--fg)!important;
+  color:var(--bg)!important;
+  font-weight:600!important;
+  box-shadow:var(--sh-1)!important;
+}
+/* Hide the radio dot */
+[data-testid="stRadio"] label > div:first-child,
+[data-testid="stRadio"] label input { display:none!important; }
+[data-testid="stRadio"] label > div { color:inherit!important; font-weight:inherit!important; }
+
+/* ── 3b. Material Symbols icon spans (inside buttons, tabs, etc.) ── */
+.material-symbols-rounded {
+  font-family:'Material Symbols Rounded'!important;
+  font-weight:normal!important;
+  font-style:normal!important;
+  font-size:1.1em!important;
+  line-height:1!important;
+  letter-spacing:normal!important;
+  text-transform:none!important;
+  display:inline-block!important;
+  white-space:nowrap!important;
+  word-wrap:normal!important;
+  direction:ltr!important;
+  -webkit-font-feature-settings:'liga'!important;
+  font-feature-settings:'liga'!important;
+  -webkit-font-smoothing:antialiased!important;
+  vertical-align:middle!important;
+  margin-right:4px!important;
+  font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24!important;
+}
+
+/* ── 4. Buttons ─────────────────────────────────────────────── */
+.stButton > button {
+  font-family:var(--font)!important;
+  font-size:var(--text-sm)!important;
+  font-weight:500!important;
+  border-radius:var(--r-sm)!important;
+  transition:background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease)!important;
+}
+.stButton > button:active { transform:translateY(1px)!important; }
+/* Primary button: filled black/white */
+.stButton > button[kind="primary"] {
+  background:var(--fg)!important;
+  color:var(--bg)!important;
+  border:none!important;
+}
+.stButton > button[kind="primary"]:hover { opacity:.85!important; }
+/* Secondary / regular */
+.stButton > button[kind="secondary"] {
+  background:transparent!important;
+  color:var(--fg)!important;
+  border:1px solid var(--line)!important;
+}
+.stButton > button[kind="secondary"]:hover {
+  background:var(--soft)!important;
+  border-color:var(--muted)!important;
+}
+
+/* ── 5. Expanders ────────────────────────────────────────────── */
+[data-testid="stExpander"] {
+  border:1px solid var(--line)!important;
+  border-radius:var(--r-md)!important;
+  overflow:hidden!important;
+  margin-bottom:var(--sp-2)!important;
+}
+[data-testid="stExpander"] > details > summary {
+  padding:var(--sp-3) var(--sp-4)!important;
+  font-weight:500!important;
+  font-size:var(--text-sm)!important;
+  background:var(--soft)!important;
+  border-bottom:1px solid var(--line)!important;
+}
+[data-testid="stExpander"] details[open] > summary { border-bottom:1px solid var(--line)!important; }
+[data-testid="stExpander"] > details > div { padding:var(--sp-3) var(--sp-4)!important; }
+
+/* ── 6. Tabs ────────────────────────────────────────────────── */
+[data-testid="stTabs"] [role="tablist"] { border-bottom:1px solid var(--line)!important; }
+[data-testid="stTabs"] button[role="tab"] {
+  font-weight:500!important;
+  font-size:var(--text-sm)!important;
+  color:var(--muted)!important;
+  padding:var(--sp-2) var(--sp-4)!important;
+}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+  color:var(--fg)!important;
+  border-bottom:2px solid var(--accent)!important;
+}
+
+/* ── 7. Pills ───────────────────────────────────────────────── */
+[data-testid="stPillsContainer"] > label {
+  border-radius:var(--r-xl)!important;
+  font-size:var(--text-sm)!important;
+  border:1px solid var(--line)!important;
+  color:var(--muted)!important;
+  background:transparent!important;
+  padding:4px var(--sp-3)!important;
+  cursor:pointer!important;
+  transition:background var(--dur-fast), color var(--dur-fast)!important;
+}
+[data-testid="stPillsContainer"] > label:has(input:checked),
+[data-testid="stPillsSelected"] {
+  background:var(--fg)!important;
+  color:var(--bg)!important;
+  border-color:var(--fg)!important;
+}
+
+/* ── 8. Captions & small text ───────────────────────────────── */
+[data-testid="stCaptionContainer"] p,
+.stCaption { font-size:var(--text-xs)!important; color:var(--muted)!important; }
+
+/* ── 9. Number inputs, select boxes, text inputs ────────────── */
+.stNumberInput input, .stSelectbox select, .stTextInput input, .stTextArea textarea {
+  font-family:var(--font)!important;
+  font-size:var(--text-sm)!important;
+  border-radius:var(--r-sm)!important;
+  border:1px solid var(--line)!important;
+  background:var(--bg)!important;
+  color:var(--fg)!important;
+}
+.stNumberInput input:focus, .stTextInput input:focus {
+  border-color:var(--accent)!important;
+  box-shadow:0 0 0 3px rgba(255,0,0,.10)!important;
+  outline:none!important;
+}
+
+/* ── 10. App shell — lockup & header ────────────────────────── */
+.lockup {
+  display:flex;
+  align-items:center;
+  gap:var(--sp-3);
+  padding:var(--sp-1) 0;
+  line-height:1;
+}
+.lg { display:flex; align-items:center; }
+.lg img { height:26px; width:auto; display:block; }
+.lg.chip img { background:#fff; border-radius:var(--r-xs); padding:2px 4px; }
+.lg-text {
+  font-size:1.3rem;
+  font-weight:800;
+  color:var(--accent);
+  letter-spacing:-.03em;
+  text-transform:uppercase;
+}
+.lk-sep {
+  display:inline-block;
+  width:1px;
+  height:18px;
+  background:var(--line);
+  flex-shrink:0;
+  margin:0 var(--sp-1);
+}
+.lk-name {
+  font-size:1.05rem;
+  font-weight:300;
+  color:var(--fg);
+  letter-spacing:.07em;
+}
+.product {
+  font-size:var(--text-xs);
+  color:var(--muted);
+  margin-top:2px;
+  white-space:nowrap;
+}
+
+/* ── 11. Connector rule ─────────────────────────────────────── */
+.connector {
+  display:flex;
+  align-items:center;
+  overflow:hidden;
+  margin:var(--sp-1) 0;
+  line-height:0;
+}
+.connector span:first-child {
+  flex:1;
+  height:1px;
+  background:var(--line);
+}
+.connector span:last-child {
+  width:5px;
+  height:5px;
+  border-radius:50%;
+  background:var(--accent);
+  margin-left:var(--sp-1);
+  flex-shrink:0;
+}
+
+/* ── 12. Price ticker ───────────────────────────────────────── */
+div.ticker {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:0 var(--sp-4);
+  padding:var(--sp-2) var(--sp-3);
+  background:var(--soft);
+  border:1px solid var(--line);
+  border-radius:var(--r-md);
+  font-size:var(--text-sm);
+  font-variant-numeric:tabular-nums;
+  line-height:1.5;
+  margin:var(--sp-2) 0;
+}
+span.tk {
+  display:inline-flex;
+  align-items:center;
+  gap:var(--sp-1);
+  white-space:nowrap;
+}
+span.tk b {
+  font-weight:700;
+  color:var(--fg);
+  font-variant-numeric:tabular-nums;
+}
+span.tkl {
+  color:var(--muted);
+  font-size:var(--text-xs);
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+span.tkc {
+  font-size:var(--text-xs);
+  font-weight:600;
+}
+span.tkw {
+  font-size:var(--text-xs);
+  color:var(--col-warn);
+  font-weight:500;
+}
+/* Price flash */
+@keyframes vk-flash-up   { 0%{color:#16a34a} 100%{color:var(--fg)} }
+@keyframes vk-flash-down  { 0%{color:var(--red)} 100%{color:var(--fg)} }
+.flash-up   { animation:vk-flash-up   .9s var(--ease); }
+.flash-down { animation:vk-flash-down .9s var(--ease); }
+
+/* ── 13. Freshness indicator ─────────────────────────────────── */
+div.fresh {
+  display:inline-flex;
+  flex-wrap:wrap;
+  gap:var(--sp-1) var(--sp-4);
+  padding:var(--sp-1) var(--sp-3);
+  background:var(--soft);
+  border:1px solid var(--line);
+  border-radius:var(--r-sm);
+  font-size:var(--text-xs);
+  color:var(--muted);
+}
+span.fr { display:inline-flex; align-items:center; gap:4px; }
+span.fr.old { color:var(--col-warn); }
+span.frl { font-weight:600; color:var(--fg); }
+
+/* ── 14. Alert bars ─────────────────────────────────────────── */
+div.alertbar {
+  padding:var(--sp-3) var(--sp-4);
+  background:var(--col-info-bg);
+  border-left:3px solid var(--blue);
+  border-radius:0 var(--r-sm) var(--r-sm) 0;
+  font-size:var(--text-sm);
+  line-height:1.55;
+  margin-bottom:var(--sp-2);
+}
+/* Danger alert variant (for market alerts) */
+div.alertbar.danger,
+div.alertbar:has(b:first-child) {
+  background:rgba(255,0,0,.05);
+  border-left-color:var(--red);
+}
+
+/* ── 15. KPI grid ───────────────────────────────────────────── */
+div.kpis {
+  display:grid;
+  gap:var(--sp-3);
+  margin:var(--sp-3) 0;
+}
+div.kpi {
+  background:var(--bg);
+  border:1px solid var(--line);
+  border-radius:var(--r-md);
+  padding:var(--sp-4) var(--sp-4) var(--sp-3);
+  box-shadow:var(--sh-1);
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  min-width:0;
+  transition:box-shadow var(--dur-med) var(--ease), border-color var(--dur-med) var(--ease);
+}
+div.kpi:hover { box-shadow:var(--sh-2); border-color:var(--muted); }
+div.kpi b {
+  display:block;
+  font-size:var(--text-kpi);
+  font-weight:700;
+  line-height:1.1;
+  color:var(--fg);
+  font-variant-numeric:tabular-nums;
+  letter-spacing:-.02em;
+  margin-bottom:var(--sp-1);
+}
+div.kpi span {
+  font-size:var(--text-xs);
+  font-weight:600;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.05em;
+  line-height:1.3;
+}
+div.kpi small {
+  font-size:var(--text-xs);
+  color:var(--muted);
+  margin-top:var(--sp-1);
+  line-height:1.4;
+}
+/* Animated count delta arrow */
+i.kd {
+  display:none;
+  font-style:normal;
+  font-size:var(--text-xs);
+  font-weight:700;
+  margin-left:4px;
+}
+i.kd.show { display:inline; }
+i.kd.up   { color:var(--col-ok); }
+i.kd.down { color:var(--red); }
+i.kd.up::before   { content:"▲ "; }
+i.kd.down::before { content:"▼ "; }
+
+/* Simple status row */
+div.status {
+  display:flex;
+  flex-wrap:wrap;
+  gap:var(--sp-3) var(--sp-6);
+  margin:var(--sp-3) 0;
+}
+div.status > div { display:flex; flex-direction:column; gap:2px; }
+div.status b {
+  font-size:var(--text-lg);
+  font-weight:700;
+  color:var(--fg);
+  font-variant-numeric:tabular-nums;
+}
+div.status span {
+  font-size:var(--text-xs);
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+
+/* ── 16. Typography ─────────────────────────────────────────── */
+p.headline {
+  font-size:var(--text-2xl);
+  font-weight:700;
+  color:var(--fg);
+  line-height:1.2;
+  letter-spacing:-.02em;
+  margin:0 0 var(--sp-2);
+}
+p.subline {
+  font-size:var(--text-md);
+  color:var(--muted);
+  line-height:1.65;
+  margin:0 0 var(--sp-4);
+  max-width:80ch;
+}
+h2.vk {
+  font-size:var(--text-xl);
+  font-weight:600;
+  color:var(--fg);
+  letter-spacing:-.01em;
+  margin:var(--sp-6) 0 var(--sp-2);
+  padding-bottom:var(--sp-2);
+  border-bottom:1px solid var(--line);
+  line-height:1.2;
+}
+p.sub {
+  font-size:var(--text-sm);
+  color:var(--muted);
+  line-height:1.55;
+  margin:calc(-1 * var(--sp-1)) 0 var(--sp-4);
+}
+div.grouptitle {
+  font-size:var(--text-xs);
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:var(--muted);
+  padding:var(--sp-4) 0 var(--sp-1);
+  border-bottom:1px solid var(--line);
+  margin-bottom:var(--sp-2);
+}
+p.hint {
+  font-size:var(--text-sm);
+  color:var(--muted);
+  line-height:1.55;
+  margin:var(--sp-2) 0;
+}
+p.syncnote {
+  font-size:var(--text-xs);
+  color:var(--muted);
+  line-height:1.55;
+  margin:var(--sp-2) 0;
+  opacity:.75;
+}
+p.newssum {
+  font-size:var(--text-sm);
+  color:var(--muted);
+  line-height:1.55;
+  margin:var(--sp-2) 0;
+}
+
+/* ── 17. Badges and chips ───────────────────────────────────── */
+span.badge {
+  display:inline-flex;
+  align-items:center;
+  padding:2px var(--sp-2);
+  border-radius:var(--r-xs);
+  font-size:var(--text-xs);
+  font-weight:600;
+  border:1px solid var(--line);
+  color:var(--muted);
+  background:transparent;
+  white-space:nowrap;
+  line-height:1.5;
+  vertical-align:middle;
+}
+span.badge.warn {
+  border-color:var(--col-warn);
+  color:var(--col-warn);
+  background:var(--col-warn-bg);
+}
+span.badge.ok {
+  border-color:var(--col-ok);
+  color:var(--col-ok);
+  background:var(--col-ok-bg);
+}
+span.badge.fill {
+  background:var(--fg);
+  color:var(--bg);
+  border-color:var(--fg);
+}
+
+/* Accuracy indicator */
+span.acc {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  font-size:var(--text-xs);
+  font-weight:500;
+  color:var(--muted);
+  vertical-align:middle;
+}
+span.acc i {
+  display:inline-block;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  flex-shrink:0;
+}
+
+/* Demand class pill */
+span.dc {
+  display:inline-flex;
+  align-items:center;
+  padding:2px var(--sp-2);
+  border-radius:var(--r-xl);
+  font-size:var(--text-xs);
+  font-weight:600;
+  white-space:nowrap;
+  vertical-align:middle;
+  line-height:1.5;
+}
+span.dc.smooth       { background:var(--col-ok-bg); color:var(--col-ok); }
+span.dc.erratic      { background:var(--col-warn-bg); color:var(--col-warn); }
+span.dc.intermittent { background:var(--col-info-bg); color:#1d8fc9; }
+span.dc.lumpy        { background:rgba(128,128,128,.10); color:var(--muted); }
+
+/* Small tag label */
+span.tag {
+  display:inline-flex;
+  align-items:center;
+  padding:2px var(--sp-2);
+  border-radius:var(--r-xs);
+  font-size:var(--text-xs);
+  font-weight:600;
+  border:1px solid var(--accent);
+  color:var(--accent);
+  white-space:nowrap;
+  vertical-align:middle;
+  line-height:1.5;
+  margin:0 2px;
+}
+
+/* Negative value, winner highlight */
+span.neg  { color:var(--red); font-weight:600; }
+span.win  {
+  font-weight:700;
+  text-decoration:underline;
+  text-underline-offset:3px;
+  text-decoration-color:var(--accent);
+}
+
+/* ── 18. Data tables ─────────────────────────────────────────── */
+div.tablewrap {
+  width:100%;
+  overflow-x:auto;
+  border:1px solid var(--line);
+  border-radius:var(--r-md);
+  margin:var(--sp-3) 0;
+  background:var(--bg);
+}
+div.tablewrap table {
+  width:100%;
+  border-collapse:collapse;
+  font-size:var(--text-sm);
+  line-height:1.45;
+}
+div.tablewrap thead {
+  position:sticky;
+  top:0;
+  z-index:1;
+}
+div.tablewrap thead th {
+  background:var(--soft);
+  padding:var(--sp-2) var(--sp-3);
+  text-align:left;
+  font-size:var(--text-xs);
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+  color:var(--muted);
+  border-bottom:1px solid var(--line);
+  white-space:nowrap;
+}
+div.tablewrap td {
+  padding:var(--sp-2) var(--sp-3);
+  border-bottom:1px solid var(--line);
+  color:var(--fg);
+  vertical-align:middle;
+}
+div.tablewrap tbody tr:last-child td { border-bottom:none; }
+div.tablewrap tbody tr:hover td { background:var(--soft); }
+div.tablewrap th.num,
+div.tablewrap td.num {
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+/* Total / main row */
+div.tablewrap tr.is-main td {
+  background:var(--soft);
+  font-weight:700;
+  border-top:1px solid var(--line);
+}
+
+/* Sparkline in cell */
+img.spark {
+  display:block;
+  height:38px;
+  width:auto;
+  vertical-align:middle;
+  max-width:180px;
+  border-radius:var(--r-xs);
+}
+
+/* Mini mix bar */
+span.mix {
+  display:inline-block;
+  height:5px;
+  background:var(--accent);
+  border-radius:3px;
+  vertical-align:middle;
+  margin-right:var(--sp-2);
+  opacity:.55;
+}
+
+/* ── 19. Signals section ─────────────────────────────────────── */
+div.sigtop {
+  height:1px;
+  background:var(--line);
+  margin:var(--sp-4) 0 var(--sp-3);
+}
+div.sigmeta {
+  display:flex;
+  flex-wrap:wrap;
+  gap:var(--sp-1) var(--sp-4);
+  font-size:var(--text-xs);
+  color:var(--muted);
+  margin:var(--sp-2) 0;
+}
+div.sigmeta span { display:inline-flex; align-items:center; gap:4px; }
+div.sigmeta b    { color:var(--fg); font-weight:600; }
+
+/* ── 20. News cards ─────────────────────────────────────────── */
+div.newscard {
+  background:var(--bg);
+  border:1px solid var(--line);
+  border-radius:var(--r-md);
+  padding:var(--sp-4);
+  margin:var(--sp-3) 0;
+  box-shadow:var(--sh-1);
+  transition:box-shadow var(--dur-med) var(--ease), border-color var(--dur-med) var(--ease);
+}
+div.newscard:hover { box-shadow:var(--sh-2); border-color:var(--muted); }
+div.newshead {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:var(--sp-1) var(--sp-2);
+  margin-bottom:var(--sp-2);
+}
+span.newsmeta {
+  font-size:var(--text-xs);
+  color:var(--muted);
+  margin-left:auto;
+  white-space:nowrap;
+}
+a.newstitle {
+  display:block;
+  font-size:var(--text-md);
+  font-weight:600;
+  color:var(--fg);
+  line-height:1.4;
+  margin-bottom:var(--sp-2);
+  text-decoration:none;
+  transition:color var(--dur-fast) var(--ease);
+}
+a.newstitle:hover { color:var(--accent); }
+div.newstags {
+  display:flex;
+  flex-wrap:wrap;
+  gap:var(--sp-1);
+  margin-top:var(--sp-2);
+}
+div.newsnote {
+  background:var(--soft);
+  border-radius:var(--r-sm);
+  padding:var(--sp-3);
+  margin:var(--sp-2) 0;
+  font-size:var(--text-sm);
+  border:1px solid var(--line);
+}
+div.newsnote .newscard {
+  border:none;
+  background:transparent;
+  padding:var(--sp-2) 0 0;
+  box-shadow:none;
+  margin:0;
+}
+
+/* ── 21. Tour / quick-guide ─────────────────────────────────── */
+span.tour-step {
+  display:inline-block;
+  font-size:var(--text-xs);
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.07em;
+  color:var(--accent);
+  margin-bottom:var(--sp-2);
+}
+
+/* ── 22. Forecast line draw animation ───────────────────────── */
+@keyframes vk-draw-anim { from{stroke-dashoffset:1} to{stroke-dashoffset:0} }
+.vk-draw {
+  stroke-dasharray:1;
+  stroke-dashoffset:1;
+  animation:vk-draw-anim 1.8s var(--ease) forwards;
+}
+.vk-first { overflow:hidden; }
+
+/* ── 23. Misc helpers ───────────────────────────────────────── */
+span.wrap { white-space:normal; word-break:break-word; }
+
+/* ── 24. Responsive ─────────────────────────────────────────── */
+@media (max-width:900px) {
+  p.headline  { font-size:var(--text-xl); }
+  div.kpis    { grid-template-columns:repeat(2,1fr)!important; }
+  div.ticker  { padding:var(--sp-2); gap:0 var(--sp-2); }
+  div.newscard { padding:var(--sp-3); }
+}
+@media (max-width:520px) {
+  div.kpis  { grid-template-columns:1fr!important; }
+  div.kpi b { font-size:var(--text-xl); }
+  [data-testid="stRadio"] > div > div { flex-direction:column; border-radius:var(--r-md); }
+}
+
+/* ── 25. Reduced motion ──────────────────────────────────────── */
+@media (prefers-reduced-motion:reduce) {
+  .vk-draw, .flash-up, .flash-down { animation:none!important; }
+  * { transition-duration:.01ms!important; animation-duration:.01ms!important; }
+}

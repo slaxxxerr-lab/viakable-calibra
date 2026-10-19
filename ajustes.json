@@ -1,0 +1,15 @@
+{
+  "lang": "es",
+  "theme": "system",
+  "accent": "#ff0000",
+  "font": "brand",
+  "density": "comfy",
+  "unit": "t",
+  "mode": "adv",
+  "anim": "on",
+  "asst_wiki": "on",
+  "asst_ai": "on",
+  "tour_done": false,
+  "role": "Administrador",
+  "user": ""
+}
