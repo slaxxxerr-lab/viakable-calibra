@@ -483,7 +483,10 @@ def bar_fig(labels, series: dict, colors: dict, height=300, unit=None):
     fig = go.Figure()
     for name, vals in series.items():
         fig.add_trace(go.Bar(x=labels, y=vals, name=name, marker_color=colors[name], hovertemplate="%{x}: %{y:,.0f} " + unit + "<extra>" + name + "</extra>"))
-    fig.update_layout(**_layout(height, margin=dict(l=0, r=8, t=10, b=4), barmode="stack", bargap=.35, legend=len(series) > 1))
+    multi = len(series) > 1
+    fig.update_layout(**_layout(height, margin=dict(l=0, r=8, t=10, b=4), barmode="stack", bargap=.35, legend=multi))
+    if not multi:
+        fig.update_layout(showlegend=False)
     step = 3 if len(labels) > 14 else 1
     fig.update_xaxes(showgrid=False, linecolor=FG, fixedrange=True, tickmode="array", tickvals=list(labels)[::step], ticktext=list(labels)[::step], tickangle=0)
     fig.update_yaxes(gridcolor=_rgba(MUTED, .15), zeroline=False, fixedrange=True, tickformat=",.0f")
