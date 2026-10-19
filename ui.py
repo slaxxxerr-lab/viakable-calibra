@@ -409,6 +409,8 @@ def _layout(height, legend=True, **kw):
              hoverlabel=dict(bgcolor=FG, font=dict(color=BG, family=FONT)))
     if legend:
         d["legend"] = dict(orientation="h", y=-0.12, x=0, font=dict(size=12, color=FG))
+    else:
+        d["showlegend"] = False
     if ANIM:
         d["transition"] = dict(duration=550, easing="cubic-in-out")
     d.update(kw)
