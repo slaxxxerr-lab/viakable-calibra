@@ -133,16 +133,20 @@ def engine_html(anim_on: bool) -> str:
     """Motor de animación: números que cuentan, destello de precios, trazo del pronóstico.
     También inyecta <link> de fuentes y CSS en el <head> del documento padre via JS."""
     import json as _json
+    # All JS must target window.parent.document — engine_html() is injected via
+    # st.html() which sandboxes the script inside an iframe; document alone
+    # refers to the iframe, not the Streamlit page.
     font_js = (
         "(function(){"
+        "var pd=window.parent?window.parent.document:document;"
         "var fonts=["
         "'https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap',"
         "'https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap'"
         "];"
         "fonts.forEach(function(href){"
-        "if(document.querySelector('link[href=\"'+href+'\"]'))return;"
-        "var l=document.createElement('link');l.rel='stylesheet';l.href=href;"
-        "(document.head||document.documentElement).appendChild(l);"
+        "if(pd.querySelector('link[href=\"'+href+'\"]'))return;"
+        "var l=pd.createElement('link');l.rel='stylesheet';l.href=href;"
+        "(pd.head||pd.documentElement).appendChild(l);"
         "});"
         "})();"
     )
@@ -150,27 +154,29 @@ def engine_html(anim_on: bool) -> str:
     if _INJECT_CSS:
         css_js = (
             "(function(){"
-            "var s=document.getElementById('vk-css');"
-            "if(!s){s=document.createElement('style');s.id='vk-css';"
-            "(document.head||document.documentElement).appendChild(s);}"
+            "var pd=window.parent?window.parent.document:document;"
+            "var s=pd.getElementById('vk-css');"
+            "if(!s){s=pd.createElement('style');s.id='vk-css';"
+            "(pd.head||pd.documentElement).appendChild(s);}"
             f"s.textContent={_json.dumps(_INJECT_CSS)};"
             "})();"
         )
     hide_icons_js = (
         "(function(){"
+        "var pd=window.parent?window.parent.document:document;"
         "function hideMS(root){"
-        "  (root||document).querySelectorAll('[class*=\"material-symbols\"]').forEach(function(el){"
+        "  (root.querySelectorAll?root:pd).querySelectorAll('[class*=\"material-symbols\"]').forEach(function(el){"
         "    el.style.cssText='display:none!important;width:0!important;height:0!important;overflow:hidden!important;';"
         "  });"
         "}"
-        "hideMS(document);"
+        "hideMS(pd);"
         "new MutationObserver(function(muts){"
         "  muts.forEach(function(m){"
         "    m.addedNodes.forEach(function(n){"
-        "      if(n.nodeType===1){hideMS(n);if(n.matches&&n.matches('[class*=\"material-symbols\"]')){hideMS(n);}}"
+        "      if(n.nodeType===1){hideMS(n);if(n.matches&&n.matches('[class*=\"material-symbols\"]')){n.style.cssText='display:none!important;';}}"
         "    });"
         "  });"
-        "}).observe(document.body||document.documentElement,{childList:true,subtree:true});"
+        "}).observe(pd.body||pd.documentElement,{childList:true,subtree:true});"
         "})();"
     )
     js_body = ENGINE_JS.strip().removeprefix("<script>").removesuffix("</script>").strip()
