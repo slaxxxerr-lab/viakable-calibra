@@ -170,7 +170,7 @@ def engine_html(anim_on: bool) -> str:
         "function hide(el){el.style.cssText='display:none!important;width:0!important;overflow:hidden!important;';}"
         "function scan(root){"
         "  var sel=root.querySelectorAll?root:pd;"
-        "  sel.querySelectorAll('[class*=\"material-symbols\"],[class*=\"material-icon\"],[data-testid=\"stExpanderToggleIcon\"],.e1fmktau2,details>summary>span:first-child').forEach(hide);"
+        "  sel.querySelectorAll('[class*=\"material-symbols\"],[class*=\"material-icon\"],[data-testid=\"stExpanderToggleIcon\"]').forEach(hide);"
         "  sel.querySelectorAll('span,i,p').forEach(function(el){"
         "    if(el.children.length===0&&ICON_TEXTS.indexOf((el.textContent||'').trim())!==-1)hide(el);"
         "  });"

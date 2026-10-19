@@ -25,13 +25,20 @@
 [data-testid="stHeader"] { background:var(--bg)!important; box-shadow:none!important; }
 [data-testid="block-container"] { padding-top:8px!important; padding-bottom:32px!important; max-width:1200px!important; }
 
-/* ── 3. Hide Streamlit icon spans (arrow_right, arrow_down, etc.) ── */
+/* ── 3. Hide icon-only spans; add ▼/▲ text indicator on expanders ── */
 [class*="material-symbols"],
 [class*="material-icon"],
-[data-testid="stExpanderToggleIcon"],
-.e1fmktau2,
-details > summary > span:first-child {
+[data-testid="stExpanderToggleIcon"] {
   display: none !important;
+}
+details > summary::after {
+  content: " ▼";
+  font-size: var(--xs);
+  color: var(--muted);
+  margin-left: 6px;
+}
+details[open] > summary::after {
+  content: " ▲";
 }
 
 /* ── 4. Lockup / header ──────────────────────────────────  */
