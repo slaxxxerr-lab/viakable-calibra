@@ -168,16 +168,22 @@ def engine_html(anim_on: bool) -> str:
         "  'expand_more','chevron_right','chevron_down','slideshow','settings',"
         "  'keyboard_arrow_down','keyboard_arrow_right','expand_less'];"
         "function hide(el){el.style.cssText='display:none!important;width:0!important;overflow:hidden!important;';}"
+        "function isPlotly(n){var p=n;for(var i=0;i<6;i++){if(!p)break;if(p.classList&&(p.classList.contains('js-plotly-plot')||p.classList.contains('plotly')))return true;p=p.parentElement;}return false;}"
         "function scan(root){"
+        "  if(isPlotly(root))return;"
         "  var sel=root.querySelectorAll?root:pd;"
-        "  sel.querySelectorAll('[class*=\"material-symbols\"],[class*=\"material-icon\"],[data-testid=\"stExpanderToggleIcon\"]').forEach(hide);"
+        "  sel.querySelectorAll('[class*=\"material-symbols\"],[class*=\"material-icon\"],[data-testid=\"stExpanderToggleIcon\"]').forEach(function(el){if(!isPlotly(el))hide(el);});"
         "  sel.querySelectorAll('span,i,p').forEach(function(el){"
-        "    if(el.children.length===0&&ICON_TEXTS.indexOf((el.textContent||'').trim())!==-1)hide(el);"
+        "    if(!isPlotly(el)&&el.children.length===0&&ICON_TEXTS.indexOf((el.textContent||'').trim())!==-1)hide(el);"
         "  });"
         "}"
         "scan(pd);"
+        "var _t=null;"
         "new MutationObserver(function(muts){"
-        "  muts.forEach(function(m){m.addedNodes.forEach(function(n){if(n.nodeType===1)scan(n);});});"
+        "  clearTimeout(_t);"
+        "  _t=setTimeout(function(){"
+        "    muts.forEach(function(m){m.addedNodes.forEach(function(n){if(n.nodeType===1)scan(n);});});"
+        "  },50);"
         "}).observe(pd.body||pd.documentElement,{childList:true,subtree:true});"
         "})();"
     )
@@ -409,8 +415,6 @@ def _layout(height, legend=True, **kw):
              hoverlabel=dict(bgcolor=FG, font=dict(color=BG, family=FONT)))
     if legend:
         d["legend"] = dict(orientation="h", y=-0.12, x=0, font=dict(size=12, color=FG))
-    else:
-        d["showlegend"] = False
     if ANIM:
         d["transition"] = dict(duration=550, easing="cubic-in-out")
     d.update(kw)
@@ -484,9 +488,7 @@ def bar_fig(labels, series: dict, colors: dict, height=300, unit=None):
     for name, vals in series.items():
         fig.add_trace(go.Bar(x=labels, y=vals, name=name, marker_color=colors[name], hovertemplate="%{x}: %{y:,.0f} " + unit + "<extra>" + name + "</extra>"))
     multi = len(series) > 1
-    fig.update_layout(**_layout(height, margin=dict(l=0, r=8, t=10, b=4), barmode="stack", bargap=.35, legend=multi))
-    if not multi:
-        fig.update_layout(showlegend=False)
+    fig.update_layout(**_layout(height, margin=dict(l=0, r=8, t=10, b=36), barmode="stack", bargap=.35, legend=True))
     step = 3 if len(labels) > 14 else 1
     fig.update_xaxes(showgrid=False, linecolor=FG, fixedrange=True, tickmode="array", tickvals=list(labels)[::step], ticktext=list(labels)[::step], tickangle=0)
     fig.update_yaxes(gridcolor=_rgba(MUTED, .15), zeroline=False, fixedrange=True, tickformat=",.0f")
