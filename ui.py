@@ -467,12 +467,8 @@ def bar_fig(labels, series: dict, colors: dict, height=300, unit=None):
             hovertemplate=label + "%{x}: %{y:,.0f} " + unit + "<extra></extra>",
         ))
     multi = len(series) > 1
-    fig.update_layout(
-        **_layout(height, margin=dict(l=0, r=8, t=10, b=4), barmode="stack", bargap=.35, legend=False),
-        showlegend=False,
-        transition=dict(duration=0),
-        uirevision="bar",
-    )
+    fig.update_layout(**_layout(height, margin=dict(l=0, r=8, t=10, b=4), barmode="stack", bargap=.35, legend=False))
+    fig.update_layout(showlegend=False, transition=dict(duration=0), uirevision="bar")
     if not multi:
         first_name = next(iter(series))
         fig.update_yaxes(title_text=first_name, title_font=dict(size=11, color=MUTED), title_standoff=4)
