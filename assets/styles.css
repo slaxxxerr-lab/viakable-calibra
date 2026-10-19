@@ -25,10 +25,12 @@
 [data-testid="stHeader"] { background:var(--bg)!important; box-shadow:none!important; }
 [data-testid="block-container"] { padding-top:8px!important; padding-bottom:32px!important; max-width:1200px!important; }
 
-/* ── 3. Hide icon text (arrow_right, _arrow_right, arrow_down, etc.) ── */
+/* ── 3. Hide Streamlit icon spans (arrow_right, arrow_down, etc.) ── */
 [class*="material-symbols"],
 [class*="material-icon"],
-[data-testid="stExpanderToggleIcon"] {
+[data-testid="stExpanderToggleIcon"],
+.e1fmktau2,
+details > summary > span:first-child {
   display: none !important;
 }
 
