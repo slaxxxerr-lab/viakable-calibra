@@ -161,35 +161,9 @@ def engine_html(anim_on: bool) -> str:
             f"s.textContent={_json.dumps(_INJECT_CSS)};"
             "})();"
         )
-    hide_icons_js = (
-        "(function(){"
-        "var pd=window.parent?window.parent.document:document;"
-        "var ICON_TEXTS=['_arrow_right','arrow_right','arrow_down','arrow_drop_down',"
-        "  'expand_more','chevron_right','chevron_down','slideshow','settings',"
-        "  'keyboard_arrow_down','keyboard_arrow_right','expand_less'];"
-        "function hide(el){el.style.cssText='display:none!important;width:0!important;overflow:hidden!important;';}"
-        "function isPlotly(n){var p=n;for(var i=0;i<6;i++){if(!p)break;if(p.classList&&(p.classList.contains('js-plotly-plot')||p.classList.contains('plotly')))return true;p=p.parentElement;}return false;}"
-        "function scan(root){"
-        "  if(isPlotly(root))return;"
-        "  var sel=root.querySelectorAll?root:pd;"
-        "  sel.querySelectorAll('[class*=\"material-symbols\"],[class*=\"material-icon\"],[data-testid=\"stExpanderToggleIcon\"]').forEach(function(el){if(!isPlotly(el))hide(el);});"
-        "  sel.querySelectorAll('span,i,p').forEach(function(el){"
-        "    if(!isPlotly(el)&&el.children.length===0&&ICON_TEXTS.indexOf((el.textContent||'').trim())!==-1)hide(el);"
-        "  });"
-        "}"
-        "scan(pd);"
-        "var _t=null;"
-        "new MutationObserver(function(muts){"
-        "  clearTimeout(_t);"
-        "  _t=setTimeout(function(){"
-        "    muts.forEach(function(m){m.addedNodes.forEach(function(n){if(n.nodeType===1)scan(n);});});"
-        "  },50);"
-        "}).observe(pd.body||pd.documentElement,{childList:true,subtree:true});"
-        "})();"
-    )
     js_body = ENGINE_JS.strip().removeprefix("<script>").removesuffix("</script>").strip()
     return (f'<div id="vk-cfg" data-anim="{"on" if anim_on else "off"}" style="display:none"></div>'
-            f'<script>{font_js}{css_js}{hide_icons_js}{js_body}</script>')
+            f'<script>{font_js}{css_js}{js_body}</script>')
 
 
 
