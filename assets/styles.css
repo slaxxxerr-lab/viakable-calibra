@@ -25,26 +25,29 @@
 [data-testid="stHeader"] { background:var(--bg)!important; box-shadow:none!important; }
 [data-testid="block-container"] { padding-top:8px!important; padding-bottom:32px!important; max-width:1200px!important; }
 
-/* ── 3. Fix: hide icon names that show as text when font fails to load ── */
+/* ── 3. Hide Material Symbol text that shows when the font hasn't loaded ── */
 /*
-   st.button(..., icon=":material/slideshow:") renders a
-   <span class="material-symbols-rounded">slideshow</span>
-   If the font hasn't loaded the word "slideshow" appears as text.
-   We keep the element in flow (so button width stays correct) but
-   make it invisible by collapsing to zero size.
+   Any element with class material-symbols-* that has NOT loaded the
+   font will render its text content (e.g. "arrow_right", "slideshow").
+   We collapse every such element to zero size site-wide.
+   The expander still gets a ▶ indicator via the native <details> marker.
 */
-button span.material-symbols-rounded,
-button span[class*="material-symbols"],
-[data-testid*="BaseButton"] span.material-symbols-rounded,
-[data-testid*="BaseButton"] span[class*="material-symbols"] {
+span.material-symbols-rounded,
+span[class*="material-symbols"] {
   font-size: 0 !important;
   line-height: 0 !important;
   width: 0 !important;
+  max-width: 0 !important;
   overflow: hidden !important;
   display: inline-block !important;
   margin: 0 !important;
   padding: 0 !important;
+  visibility: hidden !important;
 }
+
+/* Restore the native expander triangle so it still feels interactive */
+details > summary { list-style: inside disclosure-closed; }
+details[open] > summary { list-style: inside disclosure-open; }
 
 /* ── 4. Lockup / header ──────────────────────────────────  */
 .lockup { display:flex; align-items:center; gap:10px; padding:2px 0; line-height:1; }
