@@ -461,11 +461,19 @@ def bar_fig(labels, series: dict, colors: dict, height=300, unit=None):
     unit = unit or UNIT
     fig = go.Figure()
     for name, vals in series.items():
-        fig.add_trace(go.Bar(x=labels, y=vals, name=name, marker_color=colors[name], hovertemplate="%{x}: %{y:,.0f} " + unit + "<extra>" + name + "</extra>"))
+        label = f"{name}: " if len(series) > 1 else ""
+        fig.add_trace(go.Bar(
+            x=labels, y=vals, name=name, marker_color=colors[name],
+            hovertemplate=label + "%{x}: %{y:,.0f} " + unit + "<extra></extra>",
+        ))
     multi = len(series) > 1
-    fig.update_layout(**_layout(height, margin=dict(l=0, r=8, t=10, b=4 if not multi else 36), barmode="stack", bargap=.35, legend=multi))
+    fig.update_layout(
+        **_layout(height, margin=dict(l=0, r=8, t=10, b=4), barmode="stack", bargap=.35, legend=False),
+        showlegend=False,
+        transition=dict(duration=0),
+        uirevision="bar",
+    )
     if not multi:
-        fig.update_layout(showlegend=False, transition=dict(duration=0))
         first_name = next(iter(series))
         fig.update_yaxes(title_text=first_name, title_font=dict(size=11, color=MUTED), title_standoff=4)
     step = 3 if len(labels) > 14 else 1
