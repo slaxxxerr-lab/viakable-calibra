@@ -26,28 +26,9 @@
 [data-testid="block-container"] { padding-top:8px!important; padding-bottom:32px!important; max-width:1200px!important; }
 
 /* ── 3. Hide Material Symbol text that shows when the font hasn't loaded ── */
-/*
-   Any element with class material-symbols-* that has NOT loaded the
-   font will render its text content (e.g. "arrow_right", "slideshow").
-   We collapse every such element to zero size site-wide.
-   The expander still gets a ▶ indicator via the native <details> marker.
-*/
-span.material-symbols-rounded,
-span[class*="material-symbols"] {
-  font-size: 0 !important;
-  line-height: 0 !important;
-  width: 0 !important;
-  max-width: 0 !important;
-  overflow: hidden !important;
-  display: inline-block !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  visibility: hidden !important;
+[class*="material-symbols"] {
+  display: none !important;
 }
-
-/* Restore the native expander triangle so it still feels interactive */
-details > summary { list-style: inside disclosure-closed; }
-details[open] > summary { list-style: inside disclosure-open; }
 
 /* ── 4. Lockup / header ──────────────────────────────────  */
 .lockup { display:flex; align-items:center; gap:10px; padding:2px 0; line-height:1; }
