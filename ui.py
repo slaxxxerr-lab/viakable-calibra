@@ -156,9 +156,26 @@ def engine_html(anim_on: bool) -> str:
             f"s.textContent={_json.dumps(_INJECT_CSS)};"
             "})();"
         )
+    hide_icons_js = (
+        "(function(){"
+        "function hideMS(root){"
+        "  (root||document).querySelectorAll('[class*=\"material-symbols\"]').forEach(function(el){"
+        "    el.style.cssText='display:none!important;width:0!important;height:0!important;overflow:hidden!important;';"
+        "  });"
+        "}"
+        "hideMS(document);"
+        "new MutationObserver(function(muts){"
+        "  muts.forEach(function(m){"
+        "    m.addedNodes.forEach(function(n){"
+        "      if(n.nodeType===1){hideMS(n);if(n.matches&&n.matches('[class*=\"material-symbols\"]')){hideMS(n);}}"
+        "    });"
+        "  });"
+        "}).observe(document.body||document.documentElement,{childList:true,subtree:true});"
+        "})();"
+    )
     js_body = ENGINE_JS.strip().removeprefix("<script>").removesuffix("</script>").strip()
     return (f'<div id="vk-cfg" data-anim="{"on" if anim_on else "off"}" style="display:none"></div>'
-            f'<script>{font_js}{css_js}{js_body}</script>')
+            f'<script>{font_js}{css_js}{hide_icons_js}{js_body}</script>')
 
 
 
