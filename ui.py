@@ -414,7 +414,8 @@ def _layout(height, legend=True, **kw):
     d = dict(height=height, plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(family=FONT, color=MUTED, size=12),
              hoverlabel=dict(bgcolor=FG, font=dict(color=BG, family=FONT)))
     if legend:
-        d["legend"] = dict(orientation="h", y=-0.12, x=0, font=dict(size=12, color=FG))
+        d["legend"] = dict(orientation="h", y=-0.12, yanchor="top", x=0, xanchor="left",
+                           font=dict(size=12, color=FG), bgcolor="rgba(0,0,0,0)", borderwidth=0)
     if ANIM:
         d["transition"] = dict(duration=550, easing="cubic-in-out")
     d.update(kw)
