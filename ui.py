@@ -466,7 +466,7 @@ def bar_fig(labels, series: dict, colors: dict, height=300, unit=None):
             hovertemplate="%{x}: %{y:,.0f} " + unit + "<extra></extra>",
         ))
     fig.update_layout(**_layout(height, margin=dict(l=0, r=8, t=10, b=4), barmode="stack", bargap=.35, legend=False))
-    fig.update_layout(showlegend=False, hovermode="x")
+    fig.update_layout(showlegend=False, hovermode="x unified", hoverdistance=100)
     step = 3 if len(labels) > 14 else 1
     fig.update_xaxes(showgrid=False, linecolor=FG, fixedrange=True, tickmode="array", tickvals=list(labels)[::step], ticktext=list(labels)[::step], tickangle=0)
     fig.update_yaxes(gridcolor=_rgba(MUTED, .15), zeroline=False, fixedrange=True, tickformat=",.0f")
