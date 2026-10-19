@@ -130,9 +130,22 @@ ENGINE_JS = """<script>
 
 
 def engine_html(anim_on: bool) -> str:
-    """Motor de animación (se instala una sola vez): números que cuentan, destello de precios y trazo inicial de la línea del pronóstico. Respeta prefers-reduced-motion.
-    También inyecta el CSS del tema en el <head> del documento padre (los st.html viven en iframes same-origin; el motor tiene acceso al padre)."""
+    """Motor de animación: números que cuentan, destello de precios, trazo del pronóstico.
+    También inyecta <link> de fuentes y CSS en el <head> del documento padre via JS."""
     import json as _json
+    font_js = (
+        "(function(){"
+        "var fonts=["
+        "'https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap',"
+        "'https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap'"
+        "];"
+        "fonts.forEach(function(href){"
+        "if(document.querySelector('link[href=\"'+href+'\"]'))return;"
+        "var l=document.createElement('link');l.rel='stylesheet';l.href=href;"
+        "(document.head||document.documentElement).appendChild(l);"
+        "});"
+        "})();"
+    )
     css_js = ""
     if _INJECT_CSS:
         css_js = (
@@ -145,7 +158,7 @@ def engine_html(anim_on: bool) -> str:
         )
     js_body = ENGINE_JS.strip().removeprefix("<script>").removesuffix("</script>").strip()
     return (f'<div id="vk-cfg" data-anim="{"on" if anim_on else "off"}" style="display:none"></div>'
-            f'<script>{css_js}{js_body}</script>')
+            f'<script>{font_js}{css_js}{js_body}</script>')
 
 
 
