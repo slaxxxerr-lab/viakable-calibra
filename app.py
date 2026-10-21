@@ -4867,6 +4867,13 @@ def close_drawer():
     st.session_state["drawer"] = False
 
 
+def toggle_lang():
+    """Switch the dashboard language between Spanish and English."""
+    new_lang = "en" if ST.cfg()["lang"] == "es" else "es"
+    ST.put("lang", new_lang)
+    st.session_state["seg_lang"] = new_lang
+
+
 def pref_radio(label, pref, labels: dict):
     """Botones segmentados que guardan su valor en las preferencias."""
     key = f"seg_{pref}"
@@ -5054,7 +5061,8 @@ def main():
                    format_func=lambda v: t("Simple") if v == "simple" else t("Avanzado"), on_change=lambda: ST.put("mode", st.session_state["seg_ui_mode"]))
         c[2].button(t("Guía rápida"), key="btn_tour", on_click=tour_start)
         c[3].button(t("Presentar"), key="btn_present", on_click=pres_start)
-        c[4].button(t("Personalizar"), key="btn_settings", on_click=open_drawer)
+        _lang_label = "Translate to English" if cfg["lang"] == "es" else "Traducir a Español"
+        c[4].button(_lang_label, key="btn_lang", on_click=toggle_lang)
         choice = wid(st.radio, t("Sección"), "nav", nav_opts[0], options=nav_opts, horizontal=True, label_visibility="collapsed", format_func=t)
     st.html(ui.connector_html())
     st.html(ui.engine_html(ui.ANIM), unsafe_allow_javascript=True)
