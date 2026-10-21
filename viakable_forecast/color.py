@@ -132,6 +132,90 @@ def color_mix_table(monthly_df, qty_col: str = "qty") -> "pd.DataFrame":
     return grp
 
 
+def color_shares(monthly_df, gauges=None, qty_col: str = "qty") -> "dict[tuple[str,str], float]":
+    """Return {(cal, color): share} from historical data.
+
+    share = fraction of that calibre's total tons attributed to this color.
+    If gauges is provided, only those calibres are included.
+    """
+    import pandas as pd
+
+    if "color" not in monthly_df.columns:
+        return {}
+
+    df = monthly_df if gauges is None else monthly_df[monthly_df["cal"].isin(gauges)]
+    if df.empty:
+        return {}
+
+    cal_totals = df.groupby("cal")[qty_col].sum()
+    color_totals = df.groupby(["cal", "color"])[qty_col].sum()
+    result = {}
+    for (cal, color), tons in color_totals.items():
+        total = cal_totals.get(cal, 0)
+        result[(str(cal), color)] = float(tons) / float(total) if total > 0 else 0.0
+    return result
+
+
+def color_forecast_breakdown(
+    monthly_df,
+    detail_list: list,
+    selected_gauges: "list[str]",
+    qty_col: str = "qty",
+) -> "pd.DataFrame":
+    """Top-down reconciled color forecast.
+
+    For each calibre in selected_gauges:
+      1. Compute historical color shares from monthly_df.
+      2. Find the calibre's per-month forecast in detail_list (label == cal).
+      3. Distribute the forecast proportionally: fc_color = fc_cal × share.
+
+    Returns a DataFrame with columns:
+      cal, color, share_pct, fc_total (sum over horizon), fc_monthly (list per month)
+
+    The fc_monthly values for all colors within a calibre sum exactly to that
+    calibre's forecast (reconciled top-down by construction).
+    """
+    import numpy as np
+    import pandas as pd
+
+    if "color" not in monthly_df.columns or not detail_list:
+        return pd.DataFrame()
+
+    shares = color_shares(monthly_df, gauges=selected_gauges, qty_col=qty_col)
+    if not shares:
+        return pd.DataFrame()
+
+    rows = []
+    for cal in selected_gauges:
+        det = next((d for d in detail_list if str(d.get("label", "")) == str(cal)), None)
+        if det is None:
+            continue
+        fc = np.asarray(det["fc"], dtype=float)
+        if fc.sum() == 0:
+            continue
+
+        cal_shares = {color: s for (c, color), s in shares.items() if c == str(cal)}
+        if not cal_shares:
+            continue
+
+        # Normalize shares to exactly 1 (guard against float drift)
+        total_s = sum(cal_shares.values())
+        if total_s <= 0:
+            continue
+        for color, s in sorted(cal_shares.items(), key=lambda x: -x[1]):
+            frac = s / total_s
+            fc_c = fc * frac
+            rows.append({
+                "cal":        str(cal),
+                "color":      color,
+                "share_pct":  round(frac * 100, 2),
+                "fc_total":   float(fc_c.sum()),
+                "fc_monthly": fc_c.tolist(),
+            })
+
+    return pd.DataFrame(rows) if rows else pd.DataFrame()
+
+
 def verify_sums(monthly_df, qty_col: str = "qty") -> dict[str, float]:
     """Return {calibre: abs_diff} between calibre total and sum of its colors.
 

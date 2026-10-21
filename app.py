@@ -1405,6 +1405,8 @@ def section_pronostico():
             cons = consensus_block(units[0][0], market, measure, horizon, method, fc, pr.index, unit)
         if len(pr.detail) > 1 or len(units) > 1:
             calibre_table(pr, horizon, fv, unit)
+        if color_filter is None and "color" in m.columns and not money:
+            _color_forecast_section(m, pr, allg, horizon, unit)
         if A:
             waterfall_block(horizon)
         else:
@@ -1469,6 +1471,99 @@ def consensus_block(cal, market, measure, horizon, method, fc, idx, unit):
     st.html(ui.kpis([(f"{out.sum() / div:,.1f}" + (" M$" if div > 1 else f" {ui.UNIT}"), t("Total con consenso"),
                       t("{p}% contra el estadístico", p=f"{(out.sum() / fc.sum() - 1) * 100:+.1f}"))], cols=4))
     return out
+
+
+def _color_forecast_section(monthly, pr, selected_gauges, horizon, unit):
+    """Pronóstico por color — top-down reconciled color breakdown.
+
+    Shown when color_filter is None (Todos colors) and data has a color column.
+    For each calibre the calibre-level forecast is distributed by historical
+    color shares so all color forecasts sum exactly to the calibre total.
+    """
+    from viakable_forecast.color import color_forecast_breakdown, COLOR_NA, COLOR_MULTICOLOR
+
+    cdf = color_forecast_breakdown(monthly, pr.detail, list(selected_gauges))
+    if cdf.empty or cdf["fc_total"].sum() == 0:
+        return
+
+    with st.expander(t("Pronóstico por color"), expanded=False):
+        st.html(f'<p class="sub">'
+                + esc(t("Distribución del pronóstico por color según el mix histórico de cada calibre. "
+                         "Los totales por calibre cuadran exactamente con el pronóstico principal."))
+                + "</p>")
+
+        # Build the Plotly stacked-bar chart (calibres on x, stacked by color)
+        import plotly.graph_objects as go
+
+        cals = cdf["cal"].unique().tolist()
+        colors_order = (
+            cdf.groupby("color")["fc_total"].sum()
+            .sort_values(ascending=False)
+            .index.tolist()
+        )
+        # Put Sin color / N/A and Multicolor at the end
+        priority = [c for c in colors_order if c not in (COLOR_NA, COLOR_MULTICOLOR)]
+        extras   = [c for c in (COLOR_MULTICOLOR, COLOR_NA) if c in colors_order]
+        colors_order = priority + extras
+
+        fig = go.Figure()
+        for color in colors_order:
+            row = cdf[cdf["color"] == color]
+            y_vals = [float(row.loc[row["cal"] == cal, "fc_total"].sum()) for cal in cals]
+            hex_c = _COLOR_HEX.get(color, "#aaaaaa")
+            # gradient colors: use first hex stop
+            if "gradient" in hex_c:
+                hex_c = "#7b4b2a"
+            fig.add_trace(go.Bar(
+                name=t(color),
+                x=[f"{cal} AWG" for cal in cals],
+                y=y_vals,
+                marker_color=hex_c,
+                hovertemplate=f"{t(color)}: %{{y:,.1f}} {unit}<extra></extra>",
+            ))
+        fig.update_layout(
+            barmode="stack",
+            height=240,
+            margin=dict(l=0, r=0, t=8, b=0),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            font=dict(size=11),
+            xaxis=dict(showgrid=False),
+            yaxis=dict(title=unit, gridcolor="rgba(128,128,128,.15)"),
+        )
+        st.plotly_chart(fig, width="stretch", theme=None, config={"displayModeBar": False})
+
+        # Summary table: color | share % | tons per calibre
+        rows_html = []
+        for color in colors_order:
+            bg = _COLOR_HEX.get(color, "#cccccc")
+            border = "border:1px solid rgba(128,128,128,.25);" if color in ("Blanco", COLOR_NA) else ""
+            swatch = (f'<i style="display:inline-block;width:8px;height:8px;border-radius:50%;'
+                      f'background:{bg};{border}margin-right:6px;flex-shrink:0"></i>')
+            label  = esc(t(color))
+            # One column per calibre
+            cells = ""
+            for cal in cals:
+                row = cdf[(cdf["color"] == color) & (cdf["cal"] == cal)]
+                if row.empty:
+                    cells += '<td class="num">—</td>'
+                else:
+                    share = row["share_pct"].iloc[0]
+                    tons  = row["fc_total"].iloc[0]
+                    cells += f'<td class="num">{share:.1f}%&nbsp;&nbsp;{tons:,.0f}&nbsp;{esc(unit)}</td>'
+            rows_html.append(
+                f"<tr><td><span style='display:inline-flex;align-items:center'>{swatch}{label}</span></td>{cells}</tr>"
+            )
+
+        th_cals = "".join(f"<th>{cal} AWG</th>" for cal in cals)
+        table = (
+            '<div class="tablewrap"><table>'
+            f"<thead><tr><th>{esc(t('Color'))}</th>{th_cals}</tr></thead>"
+            "<tbody>" + "".join(rows_html) + "</tbody>"
+            "</table></div>"
+        )
+        st.html(table)
 
 
 def calibre_table(pr, horizon, fv, unit):
