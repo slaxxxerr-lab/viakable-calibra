@@ -33,12 +33,8 @@ details > summary > span > span {
   display: none !important;
 }
 
-/* ── 3b. Fix upload button icon overlap ─────────────────────────── */
+/* ── 3b. Upload button: fallback CSS for class-based icon spans ─── */
 [data-testid="stFileUploaderDropzone"] button [class*="material"] {
-  display: none !important;
-}
-/* Hide icon-bearing first div only when a sibling text div exists */
-[data-testid="stFileUploaderDropzone"] button > div:first-child:not(:only-child) {
   display: none !important;
 }
 details > summary {
