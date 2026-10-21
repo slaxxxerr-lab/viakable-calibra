@@ -34,6 +34,10 @@ EN = {
     # controles compartidos
     "Todos": "All", "Nacional": "Domestic", "Exportación EE. UU.": "US export", "EE. UU.": "US", "Mercado": "Market", "Calibre": "Gauge", "Calibres": "Gauges",
     "Puedes elegir varios calibres a la vez.": "You can pick several gauges at once.", "Horizonte": "Horizon", "{n} meses": "{n} months", "1 mes": "1 month",
+    "Color": "Color",
+    "Negro": "Black", "Blanco": "White", "Rojo": "Red", "Verde": "Green", "Azul": "Blue",
+    "Amarillo": "Yellow", "Gris": "Gray", "Naranja": "Orange", "Café": "Brown",
+    "Multicolor (paquete)": "Multicolor (pack)", "Sin color / N/A": "No color / N/A",
     "en todos los calibres": "across all gauges", "de calibre {g} AWG": "for gauge {g} AWG", "en la selección actual": "in the current selection",
     "Toneladas": "Tons", "Ventas $": "Sales $", "Ver pronóstico en": "Show forecast in", "Cobre": "Copper", "Aluminio": "Aluminum",
     # datos

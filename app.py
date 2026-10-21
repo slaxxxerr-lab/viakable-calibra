@@ -710,6 +710,102 @@ def cal_chips(gauges):
     return [[g] for g in sorted(sel, key=lambda x: (not x.isdigit(), int(x) if x.isdigit() else 0))]
 
 
+# Hex/CSS background for each color name (used only for the swatch legend)
+_COLOR_HEX: dict[str, str] = {
+    "Negro":               "#1a1a1a",
+    "Blanco":              "#d8d8d8",
+    "Rojo":                "#d93030",
+    "Verde":               "#1f9e50",
+    "Azul":                "#1d7fe8",
+    "Amarillo":            "#e6b800",
+    "Gris":                "#8a8a8a",
+    "Naranja":             "#e87820",
+    "Café":                "#7b4b2a",
+    "Multicolor (paquete)":"linear-gradient(90deg,#d93030 0%,#1f9e50 35%,#1d7fe8 70%,#e6b800 100%)",
+    "Sin color / N/A":     "#cccccc",
+}
+
+
+def _color_swatches(colors: list[str]):
+    """Inline legend: colored dot + label for each color in the list."""
+    if not colors:
+        return
+    parts = []
+    for c in colors:
+        bg = _COLOR_HEX.get(c, "#cccccc")
+        border = "border:1px solid rgba(128,128,128,.25);" if c in ("Blanco", "Sin color / N/A") else ""
+        parts.append(
+            f'<span class="acc" style="white-space:nowrap">'
+            f'<i style="background:{bg};{border}border-radius:50%;width:8px;height:8px;flex-shrink:0"></i>'
+            f'{esc(t(c))}</span>'
+        )
+    st.html(
+        '<div style="display:flex;flex-wrap:wrap;gap:4px 12px;padding:2px 0 6px">'
+        + "".join(parts) + "</div>"
+    )
+
+
+def color_chips(monthly, cal_selection: list) -> "set[str] | None":
+    """Color filter chips, cascading from the calibre selection.
+
+    Returns a set of selected color labels, or None when 'Todos' is selected.
+    """
+    if "color" not in monthly.columns:
+        return None
+
+    sel_gauges = tuple(sorted(g for u in cal_selection for g in u))
+
+    # When calibre selection changes, drop colors that no longer exist
+    if st.session_state.get("_color_gauges") != sel_gauges:
+        m_cal = monthly[monthly["cal"].isin(sel_gauges)]
+        valid_now = set(m_cal["color"].unique())
+        key = "chips_color"
+        current = st.session_state.get(key, ["Todos"])
+        kept = [c for c in current if c == "Todos" or c in valid_now]
+        st.session_state[key] = kept if kept else ["Todos"]
+        st.session_state["_color_gauges"] = sel_gauges
+
+    # Available colors in the selected calibres, ordered by tons desc
+    m_cal = monthly[monthly["cal"].isin(sel_gauges)]
+    order = (
+        m_cal.groupby("color")["qty"].sum()
+        .sort_values(ascending=False)
+        .index.tolist()
+    )
+    from viakable_forecast.color import COLOR_MULTICOLOR, COLOR_NA
+    priority   = [c for c in order if c not in (COLOR_NA, COLOR_MULTICOLOR)]
+    extras     = [c for c in (COLOR_MULTICOLOR, COLOR_NA) if c in order]
+    avail      = priority + extras
+
+    if not avail:
+        return None
+
+    opts = ["Todos"] + avail
+    key  = "chips_color"
+    if key not in st.session_state:
+        v = [x for x in sv(key, ["Todos"]) if x in opts] or ["Todos"]
+        st.session_state[key], st.session_state["_color_prev"] = v, v
+
+    def _fix_color():
+        new  = list(st.session_state[key] or [])
+        prev = st.session_state.get("_color_prev", ["Todos"])
+        added = [x for x in new if x not in prev]
+        if not new or "Todos" in added:
+            new = ["Todos"]
+        else:
+            new = [x for x in new if x != "Todos"]
+        st.session_state[key]       = new
+        st.session_state["_color_prev"] = new
+
+    st.pills(t("Color"), opts, selection_mode="multi", key=key, on_change=_fix_color)
+    sel = st.session_state[key] or ["Todos"]
+    store()[key] = sel
+
+    _color_swatches(avail)
+
+    return None if "Todos" in sel else set(sel)
+
+
 def price_control(series: str, label: str, key: str, default: float, step: float, min_value: float):
     """Precio de un metal (o del tipo de cambio): en vivo por omisión, o manual (por ejemplo un precio de contrato)."""
     q = live_snapshot()["q"].get(series)
@@ -732,7 +828,7 @@ def px_disabled(series: str) -> bool:
 
 
 def selection_controls(prep, market_label="Mercado"):
-    """Mercado, calibres y horizonte: los mismos controles en Pronóstico y Planeación."""
+    """Mercado, calibres, color y horizonte: los mismos controles en Pronóstico y Planeación."""
     m = prep.monthly
     mk = [x for x in (MKT_NAC, MKT_USA) if x in set(m["mkt"])]
     market = None
@@ -740,8 +836,9 @@ def selection_controls(prep, market_label="Mercado"):
         market = wid(st.radio, t(market_label), "seg_mkt", "Todos", options=["Todos", *mk], horizontal=True, format_func=t)
         market = None if market == "Todos" else market
     units = cal_chips(prep.gauges)
+    color_filter = color_chips(m, units)
     horizon = wid(st.radio, t("Horizonte"), "seg_h", 6, options=[3, 6, 12], horizontal=True, format_func=lambda x: t("{n} meses", n=x))
-    return units, market, horizon
+    return units, market, horizon, color_filter
 
 
 def layout():
@@ -1220,11 +1317,12 @@ def section_pronostico():
     u = ui.UNIT
     left, right = layout()
     with left:
-        units, market, horizon = selection_controls(prep)
+        units, market, horizon, color_filter = selection_controls(prep)
         meas = wid(st.radio, t("Ver pronóstico en"), "seg_meas", "Toneladas", options=list(MEAS), horizontal=True, format_func=t)
         measure = MEAS[meas]
         allg = tuple(g for x in units for g in x)
-        bt = cached_bt(m, allg, market, measure, prices, ml)
+        m_view = m if color_filter is None else m[m["color"].isin(color_filter)]
+        bt = cached_bt(m_view, allg, market, measure, prices, ml)
         method, mode = E.AUTO, "sum"
         best_name = E.best_method(bt) if len(bt) else E.AUTO
         if A:
@@ -1248,7 +1346,7 @@ def section_pronostico():
                      on_change=lambda: apply_preset(st.session_state["chips_preset"]) if st.session_state.get("chips_preset") else None)
         export_slot = st.container()
 
-    pr = cached_project(m, tuple(tuple(x) for x in units), market, horizon, method, measure, mode, mult, sig, w, prices, ml, get_crm(None, measure, prices), apply_signals_on())
+    pr = cached_project(m_view, tuple(tuple(x) for x in units), market, horizon, method, measure, mode, mult, sig, w, prices, ml, get_crm(None, measure, prices), apply_signals_on())
     money = measure == E.MXN
     unit = "MXN" if money else u
     fv = (lambda v: ui.mxn(v)) if money else (lambda v: f"{v:,.0f} {u}")
@@ -1256,13 +1354,15 @@ def section_pronostico():
     lo, hi = pr.lo, pr.hi
     prev = float(pr.table["Mismos meses año anterior"].sum())
     yoy = (fc.sum() / prev - 1) * 100 if prev > 0 else None
-    auto = pr if method == E.AUTO else cached_project(m, tuple(tuple(x) for x in units), market, horizon, E.AUTO, measure, mode, mult, sig, w, prices, ml, get_crm(None, measure, prices), apply_signals_on())
+    auto = pr if method == E.AUTO else cached_project(m_view, tuple(tuple(x) for x in units), market, horizon, E.AUTO, measure, mode, mult, sig, w, prices, ml, get_crm(None, measure, prices), apply_signals_on())
     sum_mode = mode == "sum" and len(units) > 1
     main_name = t(MODE_LBL["sum"]) if sum_mode else t(pr.method)
     cls = M.demand_class(hist.values)[0]
 
     with right:
         scope = scope_text(units, market, len(prep.gauges))
+        if color_filter:
+            scope += " · " + ", ".join(sorted(color_filter))
         head = (t("Esperamos ventas por {v} {scope} en los próximos {h} meses con el método {m}.", v=fv(fc.sum()), scope=scope, h=horizon, m=main_name) if money
                 else t("Esperamos {v} {scope} en los próximos {h} meses con el método {m}.", v=fv(fc.sum()), scope=scope, h=horizon, m=main_name))
         k = ui.acc_key(auto.error)
@@ -1271,7 +1371,7 @@ def section_pronostico():
         if method not in (E.AUTO, auto.method) and not sum_mode:
             sub += " " + t("Estás viendo {m} como método principal.", m=t(method))
         if mult != 1.0:
-            base_pr = cached_project(m, tuple(tuple(x) for x in units), market, horizon, method, measure, mode, 1.0, sig, w, prices, ml, get_crm(None, measure, prices), apply_signals_on())
+            base_pr = cached_project(m_view, tuple(tuple(x) for x in units), market, horizon, method, measure, mode, 1.0, sig, w, prices, ml, get_crm(None, measure, prices), apply_signals_on())
             d_t = fc.sum() - base_pr.fc.sum()
             tf = get_tariff()
             sub += " " + t("Con arancel de {s}% en lugar de {c}%, la exportación a EE. UU. cambia {x}% y el total queda {d} {dir}.",
@@ -1284,7 +1384,7 @@ def section_pronostico():
         levers = changed_levers()
         if levers:
             bs = neutral(store())
-            bpr = cached_project(m, tuple(tuple(x) for x in units), market, horizon, method, measure, mode, get_mult(bs), get_sig(bs), get_w(bs), get_prices(bs), ml,
+            bpr = cached_project(m_view, tuple(tuple(x) for x in units), market, horizon, method, measure, mode, get_mult(bs), get_sig(bs), get_w(bs), get_prices(bs), ml,
                                  get_crm(bs, measure, get_prices(bs)), apply_signals_on(bs))
             whatif_strip([delta_chip(t("Pronóstico {h} meses", h=horizon), float(fc.sum()), float(bpr.fc.sum()), fv)], levers)
         else:
@@ -1318,7 +1418,7 @@ def section_pronostico():
             atypical_block(m_raw, det, allg, E.windows_for(m_raw))
         methods_df = pd.DataFrame()
         if A:
-            methods_df = compare_table(m, allg, market, horizon, measure, prices, ml, pr, bt, w, sig, mult, mode, units, method, fv, unit)
+            methods_df = compare_table(m_view, allg, market, horizon, measure, prices, ml, pr, bt, w, sig, mult, mode, units, method, fv, unit)
             ml_block(ml, m, units, market, measure, prices)
             lowvol_block(m, allg)
             tracking_block(m, ml, allg)
@@ -1332,7 +1432,7 @@ def section_pronostico():
                 with c2:
                     cmp_names = st.pills(t("Comparar con otros métodos"), opts, selection_mode="multi", key="chips_cmp", format_func=t) or []
         marks = atypical_marks(det, allg, hist) if A else []
-        compare = [(t(n), cached_project(m, tuple(tuple(x) for x in units), market, horizon, n, measure, mode, mult, sig, w, prices, ml, get_crm(None, measure, prices), apply_signals_on()).fc) for n in cmp_names]
+        compare = [(t(n), cached_project(m_view, tuple(tuple(x) for x in units), market, horizon, n, measure, mode, mult, sig, w, prices, ml, get_crm(None, measure, prices), apply_signals_on()).fc) for n in cmp_names]
         with fig_slot:
             st.plotly_chart(ui.forecast_fig(list(hist.index), hist.values, list(pr.index), fc, lo, hi, unit, main_name, cons, money=money,
                                             trend=show_trend, compare=compare, marks=marks), width="stretch", theme=None, config={"displayModeBar": False})
@@ -1489,7 +1589,7 @@ def section_planeacion():
     u = ui.UNIT
     left, right = layout()
     with left:
-        units, market, horizon = selection_controls(prep)
+        units, market, horizon, color_filter = selection_controls(prep)
         wid(st.radio, t("Nivel de servicio"), "seg_service", 95, options=[90, 95, 98, 99], horizontal=True, format_func=lambda v: f"{v}%")
         st.caption(t("Probabilidad de no quedarse sin inventario durante el tiempo de reposición."))
         wid(st.slider, t("Tiempo de reposición (meses)"), "pl_lt", 1.5, min_value=0.25, max_value=4.0, step=0.25)
@@ -1520,10 +1620,11 @@ def section_planeacion():
                 format_func=lambda i: t("Automático: el más certero") if i == E.AUTO else t("Modelo por señales"))
 
     gauges = tuple(g for x in units for g in x)
+    m_view = m if color_filter is None else m[m["color"].isin(color_filter)]
     prices, mult, sig, w, params = get_prices(), get_mult(), get_sig(), get_w(), get_params()
     ver = sv("ov_ver", 0)
     ov = {"metal": sv("ov_metal", {}), "inv": sv("ov_inv", {}), "cap": sv("ov_cap", {})}
-    res = cached_plan(m, gauges, horizon, params, prices, mult, sig, w, ov, ml, get_crm(None, E.TON, prices))
+    res = cached_plan(m_view, gauges, horizon, params, prices, mult, sig, w, ov, ml, get_crm(None, E.TON, prices))
     rows = res.rows if market is None else res.rows[res.rows["mkt"] == market]
     tot = PL.totals(res, market)
     months = [ui.mes(x) for x in res.months]
@@ -1539,7 +1640,7 @@ def section_planeacion():
         levers = changed_levers()
         if levers:
             bs = neutral(store())
-            res_b = cached_plan(m, gauges, horizon, get_params(bs), get_prices(bs), get_mult(bs), get_sig(bs), get_w(bs), ov, ml, get_crm(bs, E.TON, get_prices(bs)))
+            res_b = cached_plan(m_view, gauges, horizon, get_params(bs), get_prices(bs), get_mult(bs), get_sig(bs), get_w(bs), ov, ml, get_crm(bs, E.TON, get_prices(bs)))
             tb_ = PL.totals(res_b, market)
             whatif_strip([delta_chip(t("Volumen {h} meses", h=horizon), tot["vol"], tb_["vol"], kg), delta_chip(t("Ingreso {h} meses", h=horizon), tot["rev"], tb_["rev"], ui.mxn),
                           delta_chip(t("Margen bruto"), tot["margin"], tb_["margin"], ui.mxn),
