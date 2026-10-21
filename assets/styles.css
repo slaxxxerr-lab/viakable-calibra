@@ -32,6 +32,13 @@
 details > summary > span > span {
   display: none !important;
 }
+
+/* ── 3b. Fix uploadUpload overlap in file uploader button ──────────── */
+[data-testid="stFileUploaderDropzone"] button div > span:first-child,
+[data-testid="stFileUploaderDropzone"] button > span:first-child,
+[data-testid="stFileUploaderDropzone"] button [class*="material"] {
+  display: none !important;
+}
 details > summary {
   list-style: none !important;
   cursor: pointer;
