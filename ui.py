@@ -161,29 +161,9 @@ def engine_html(anim_on: bool) -> str:
             f"s.textContent={_json.dumps(_INJECT_CSS)};"
             "})();"
         )
-    # JS: hide Material-Symbols icon spans inside the file uploader button.
-    # CSS can't catch them because Streamlit applies the font via an emotion-hash
-    # class (e.g. st-emotion-cache-XXXX), not via a class that contains "material-symbols".
-    # We check the computed font-family at runtime and hide any span whose font
-    # resolves to Material Symbols Rounded (the icon font), leaving the button text visible.
-    upload_icon_js = (
-        "(function(){"
-        "var pd=window.parent?window.parent.document:document;"
-        "var pw=window.parent?window.parent:window;"
-        "function hideIconSpans(){"
-        "  pd.querySelectorAll('[data-testid=\"stFileUploaderDropzone\"] button span').forEach(function(s){"
-        "    var f=(pw.getComputedStyle(s).fontFamily||'').toLowerCase();"
-        "    if(f.indexOf('material')!==-1){s.style.display='none';}"
-        "  });"
-        "}"
-        "hideIconSpans();"
-        "setTimeout(hideIconSpans,400);"
-        "setTimeout(hideIconSpans,1500);"
-        "})();"
-    )
     js_body = ENGINE_JS.strip().removeprefix("<script>").removesuffix("</script>").strip()
     return (f'<div id="vk-cfg" data-anim="{"on" if anim_on else "off"}" style="display:none"></div>'
-            f'<script>{font_js}{css_js}{upload_icon_js}{js_body}</script>')
+            f'<script>{font_js}{css_js}{js_body}</script>')
 
 
 

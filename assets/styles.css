@@ -33,9 +33,16 @@ details > summary > span > span {
   display: none !important;
 }
 
-/* ── 3b. Upload button: fallback CSS for class-based icon spans ─── */
-[data-testid="stFileUploaderDropzone"] button [class*="material"] {
+/* ── 3b. Upload button: replace icon+text overlap with one clean label ── */
+[data-testid="stFileUploaderDropzone"] button * {
   display: none !important;
+}
+[data-testid="stFileUploaderDropzone"] button::before {
+  content: "Subir archivo";
+  display: inline !important;
+  font-family: var(--font) !important;
+  font-size: var(--sm) !important;
+  color: var(--fg) !important;
 }
 details > summary {
   list-style: none !important;
