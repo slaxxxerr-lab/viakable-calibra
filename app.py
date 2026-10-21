@@ -920,6 +920,7 @@ def file_note_t(n: str) -> str:
 
 def upload_block():
     """Carga de varios archivos. Devuelve (tabla de ventas, nombre para mostrar, firma de los archivos) o (None, '', '')."""
+    st.html(f'<p class="hint" style="margin-bottom:6px">{esc(t("Haz clic en el botón o arrastra tu archivo directamente al recuadro de abajo."))}</p>')
     ups = st.file_uploader(t("Arrastra aquí tus archivos"), type=["xlsx", "xls", "csv", "pdf"], accept_multiple_files=True, key="up_multi",
                            help=t("Puedes subir varios archivos de ventas con la misma estructura (por año o por planta) y PDF con tablas. Solo son obligatorias la fecha, la cantidad y el calibre."))
     if ups:
