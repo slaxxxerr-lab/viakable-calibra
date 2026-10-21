@@ -27,7 +27,8 @@ _ALIASES: dict[str, list[str]] = {
     "ch":       ["fuerza de venta", "ch", "sales force", "canal"],
     "cli":      ["cliente", "cli", "solicitante", "customer", "client"],
     "fam":      ["vcfamiliatransversal", "familia", "fam", "family"],
-    "prod":     ["id producto", "prod", "producto", "product", "texto breve de material"],
+    "prod":     ["id producto", "prod", "product"],
+    "prod_name": ["producto", "texto breve de material", "product name", "nombre del producto"],
     "mkt_raw":  ["pais", "país", "mkt_raw", "market", "land1"],
 }
 
@@ -203,7 +204,7 @@ def prepare(
     df["cal"] = df["cal"].astype(str).str.strip()
 
     # Optional dimension columns
-    for dim in ("seg", "ch", "cli", "fam", "prod", "kgm", "mkt_raw"):
+    for dim in ("seg", "ch", "cli", "fam", "prod", "prod_name", "kgm", "mkt_raw"):
         if dim not in df.columns:
             df[dim] = ""
 
@@ -221,14 +222,14 @@ def prepare(
     df = _derive_mkt(df, export_rule)
 
     # Aggregate monthly
-    dim_cols = [c for c in ("seg", "ch", "cli", "fam", "prod", "mkt_raw", "mkt") if c in df.columns]
+    dim_cols = [c for c in ("seg", "ch", "cli", "fam", "prod", "prod_name", "mkt_raw", "mkt") if c in df.columns]
     monthly = (
         df.groupby(["ym", "cal"] + dim_cols, as_index=False)["qty"]
         .sum()
         .sort_values(["ym", "cal"])
         .reset_index(drop=True)
     )
-    for c in ("seg", "ch", "cli", "fam", "prod", "mkt_raw", "mkt"):
+    for c in ("seg", "ch", "cli", "fam", "prod", "prod_name", "mkt_raw", "mkt"):
         if c not in monthly.columns:
             monthly[c] = ""
 
@@ -236,6 +237,18 @@ def prepare(
     monthly["metal"] = monthly["fam"].str.contains("AL", case=False, na=False).map(
         {True: "Aluminio", False: "Cobre"}
     )
+
+    # Parse color from descriptive product name (prod_name = "Producto" column),
+    # falling back to the product ID (prod) when prod_name is blank.
+    from viakable_forecast.color import add_color_column, COLOR_NA
+    color_src = "prod_name" if (monthly.get("prod_name", pd.Series(dtype=str)).str.strip() != "").any() else "prod"
+    monthly, unclassified_colors = add_color_column(monthly, prod_col=color_src)
+    if unclassified_colors:
+        import logging as _lg
+        _lg.getLogger(__name__).info(
+            "Color parser — %d product names resolved to 'Sin color / N/A' (source: %s): %s",
+            len(unclassified_colors), color_src, unclassified_colors[:20],
+        )
 
     n_months = monthly["ym"].nunique()
     gauges = sorted(monthly["cal"].unique().tolist(),
