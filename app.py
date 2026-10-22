@@ -818,8 +818,9 @@ def color_chips(monthly, cal_selection: list) -> "set[str] | None":
         sq = _COLOR_SQUARE.get(c, "●")
         return f"{sq} {t(c)}"
 
-    st.pills(t("Color"), opts, selection_mode="multi", key=key, on_change=_fix_color,
-             format_func=_fmt_color)
+    with st.container(height=130, border=False):
+        st.pills(t("Color"), opts, selection_mode="multi", key=key, on_change=_fix_color,
+                 format_func=_fmt_color)
     sel = st.session_state[key] or ["Todos"]
     store()[key] = sel
 
