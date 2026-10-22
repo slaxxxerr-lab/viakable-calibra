@@ -269,24 +269,55 @@ def sample_data() -> pd.DataFrame:
               "CU BT | Cal 14", "AL BT | Cal 6"]
     start  = pd.Timestamp("2024-01-01")
 
+    # Realistic color mix per gauge (matches real-data proportions)
+    _COLOR_MIX: dict[str, list[tuple[str, str, float]]] = {
+        # (ID suffix, Producto name fragment, weight)
+        "6":     [("NEM", "PSD AL URD", 1.0)],   # aluminum — no color
+        "10":    [("NEM", "C THW 10 NE 100MT",  0.38),
+                  ("BLM", "C THW 10 BL 100MT",  0.24),
+                  ("ROM", "C THW 10 RO 100MT",  0.14),
+                  ("VEM", "C THW 10 VE 100MT",  0.10),
+                  ("AZM", "C THW 10 AZ 100MT",  0.05),
+                  ("SIN", "ACCESORIO THW 10",    0.09)],
+        "12":    [("NEM", "C THW 12 NE 100MT",  0.31),
+                  ("BLM", "C THW 12 BL 100MT",  0.30),
+                  ("ROM", "C THW 12 RO 100MT",  0.15),
+                  ("VEM", "C THW 12 VE 100MT",  0.12),
+                  ("AZM", "C THW 12 AZ 100MT",  0.04),
+                  ("SIN", "ACCESORIO THW 12",    0.08)],
+        "14":    [("VEM", "C THHN 14 VE 500FT", 0.28),
+                  ("NEM", "C THHN 14 NE 500FT", 0.25),
+                  ("ROM", "C THHN 14 RO 500FT", 0.23),
+                  ("BLM", "C THHN 14 BL 500FT", 0.20),
+                  ("AZM", "C THHN 14 AZ 500FT", 0.04)],
+        "16y18": [("NEM", "C TF 16 NE 100MIN",  0.36),
+                  ("ROM", "C TF 16 RO 100MIN",  0.27),
+                  ("BLM", "C TF 16 BL 100MIN",  0.22),
+                  ("VEM", "C TF 16 VE 100MIN",  0.15)],
+    }
+
     for m in range(30):
         ts = start + pd.DateOffset(months=m)
         ym_str = ts.strftime("%Y%m")
         seasonal = 1 + 0.15 * np.sin((m % 12) * np.pi / 6)
         for g in gauges:
             base_t = {"6": 180, "10": 250, "12": 300, "14": 200, "16y18": 150}[g]
-            # Two rows per gauge (two product lines)
-            for _ in range(2):
+            color_opts = _COLOR_MIX[g]
+            weights    = [w for _, _, w in color_opts]
+            w_total    = sum(weights)
+
+            for (id_sfx, prod_name, w) in color_opts:
                 seg = rng.choice(segs)
                 ch  = rng.choice(chs)
                 is_export = rng.random() < 0.14
-                # Exports drop after Apr-2026
                 if is_export and ts >= pd.Timestamp("2026-05-01"):
                     is_export = rng.random() < 0.06
                 fam = fams[gauges.index(g) % len(fams)]
+                # Alternate kgm for 16y18 so the split assigns half to Cal 16, half to Cal 18
                 kgm = {"6": 0.0515, "10": 0.0826, "12": 0.1045,
-                       "14": 0.1319, "16y18": 0.1624 if rng.random() > 0.5 else 0.1316}[g]
-                tons = max(0, base_t * seasonal * (0.7 + 0.6 * rng.random()) / 2)
+                       "14": 0.1319, "16y18": 0.1624 if id_sfx in ("NEM", "ROM") else 0.1316}[g]
+                tons = max(0, base_t * seasonal * (w / w_total) * (0.8 + 0.4 * rng.random()))
+                prod_id = f"P{g}{id_sfx}-{rng.randint(100,999)}"
                 rows.append({
                     "Year": ts.year,
                     "Month": ts.month,
@@ -294,9 +325,9 @@ def sample_data() -> pd.DataFrame:
                     "Fuerza de Venta": ch,
                     "ID UEN": seg,
                     "Periodo Contable": int(ym_str),
-                    "ID producto": f"P{g}-{rng.randint(100,999)}",
+                    "ID producto": prod_id,
                     "Calibre": g,
-                    "Producto": f"Cable {g} AWG",
+                    "Producto": prod_name,
                     "Gauge": g.replace("16y18", "16"),
                     "ContMet (kg/m)": kgm,
                     "vcFamiliaTransversal": fam,

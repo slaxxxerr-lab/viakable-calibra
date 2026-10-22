@@ -725,6 +725,21 @@ _COLOR_HEX: dict[str, str] = {
     "Sin color / N/A":     "#cccccc",
 }
 
+# Colored Unicode squares shown inside the pill chip for each color
+_COLOR_SQUARE: dict[str, str] = {
+    "Negro":               "⬛",
+    "Blanco":              "⬜",
+    "Rojo":                "🟥",
+    "Verde":               "🟩",
+    "Azul":                "🟦",
+    "Amarillo":            "🟨",
+    "Gris":                "🔲",
+    "Naranja":             "🟧",
+    "Café":                "🟫",
+    "Multicolor (paquete)":"🌈",
+    "Sin color / N/A":     "○",
+}
+
 
 def _color_swatches(colors: list[str]):
     """Inline legend: colored dot + label for each color in the list."""
@@ -797,11 +812,16 @@ def color_chips(monthly, cal_selection: list) -> "set[str] | None":
         st.session_state[key]       = new
         st.session_state["_color_prev"] = new
 
-    st.pills(t("Color"), opts, selection_mode="multi", key=key, on_change=_fix_color)
+    def _fmt_color(c):
+        if c == "Todos":
+            return t("Todos")
+        sq = _COLOR_SQUARE.get(c, "●")
+        return f"{sq} {t(c)}"
+
+    st.pills(t("Color"), opts, selection_mode="multi", key=key, on_change=_fix_color,
+             format_func=_fmt_color)
     sel = st.session_state[key] or ["Todos"]
     store()[key] = sel
-
-    _color_swatches(avail)
 
     return None if "Todos" in sel else set(sel)
 
