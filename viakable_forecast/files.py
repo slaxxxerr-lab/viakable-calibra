@@ -36,10 +36,49 @@ def sheet_names(content: bytes) -> list[str]:
 
 # ── File reading ──────────────────────────────────────────────────────────────
 
+# Column hints that indicate a sheet contains sales data (lowercase)
+_SALES_HINTS = {"toneladas", "calibre", "gauge", "date", "fecha",
+                "periodo", "cantidad", "qty", "tons"}
+# Sheets whose names suggest they are NOT sales data
+_SKIP_NAMES  = {"dashboard", "pivot", "pivots", "resumen", "summary",
+                "graficas", "gráficas", "charts", "config", "template"}
+
+
+def best_sheet(content: bytes) -> "str | int":
+    """Return the sheet name most likely to contain sales data.
+
+    Scores each sheet by how many of its header cells contain sales-related
+    keywords.  Falls back to 0 (first sheet) if openpyxl is unavailable.
+    """
+    try:
+        import openpyxl
+        wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+        best_name: "str | None" = None
+        best_score = -1
+        for sname in wb.sheetnames:
+            if sname.lower().strip() in _SKIP_NAMES:
+                continue
+            ws = wb[sname]
+            headers: list[str] = []
+            for row in ws.iter_rows(min_row=1, max_row=1, values_only=True):
+                headers = [str(c).lower().strip() for c in row if c is not None]
+                break
+            score = sum(1 for h in headers for hint in _SALES_HINTS if hint in h)
+            if score > best_score:
+                best_score = score
+                best_name = sname
+        wb.close()
+        return best_name if best_name is not None else 0
+    except Exception:
+        return 0
+
+
 def read_table(name: str, content: bytes, sheet=0) -> "pd.DataFrame":
     """Read an Excel or CSV file from bytes and return a DataFrame.
 
-    `sheet` can be a sheet index (int) or sheet name (str); ignored for CSV.
+    When sheet=0 (the default) and the file has multiple sheets, automatically
+    picks the sheet most likely to contain sales data (using best_sheet()).
+    Pass an explicit sheet name or index to override.
     """
     import pandas as pd
 
@@ -47,6 +86,12 @@ def read_table(name: str, content: bytes, sheet=0) -> "pd.DataFrame":
     buf = io.BytesIO(content)
 
     if file_kind == "excel":
+        # Auto-detect best sheet when caller hasn't explicitly chosen one
+        if sheet == 0:
+            names = sheet_names(content)
+            if len(names) > 1:
+                sheet = best_sheet(content)
+
         try:
             df = pd.read_excel(buf, sheet_name=sheet, header=0, engine="openpyxl")
         except Exception:

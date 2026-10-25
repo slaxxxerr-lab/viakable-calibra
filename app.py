@@ -1080,6 +1080,46 @@ def upload_block():
     return combined, t("{n} archivos", n=len(all_tabs)), sig
 
 
+# ================================================================== diagnóstico de carga
+def _diag_upload(raw: pd.DataFrame, prep, mapping: dict, kind: str, file_name: str):
+    """Diagnostic panel shown in Avanzado mode after a file is loaded."""
+    import traceback as _tb
+
+    st.markdown(f"**{t('Archivo')}:** `{file_name or kind}`")
+    st.markdown(f"**{t('Filas leídas')}:** {len(raw):,} · **{t('Columnas')}:** {len(raw.columns)}")
+
+    # Column types
+    col_rows = [[c, str(raw[c].dtype), str(raw[c].iloc[0]) if len(raw) else "—"]
+                for c in raw.columns[:20]]
+    st.markdown(f"**{t('Columnas del archivo')} (primeras 20):**")
+    col_data = pd.DataFrame(col_rows, columns=[t("Columna"), t("Tipo"), t("Ejemplo")])
+    st.dataframe(col_data, hide_index=True, use_container_width=True)
+
+    # Detected mapping
+    map_rows = [[k, v or "—"] for k, v in mapping.items()]
+    st.markdown(f"**{t('Mapeo detectado')}:**")
+    st.dataframe(pd.DataFrame(map_rows, columns=[t("Campo estándar"), t("Columna del archivo")]),
+                 hide_index=True, use_container_width=True)
+
+    # Post-prepare stats
+    m = prep.monthly
+    st.markdown(f"**{t('Rango de fechas')}:** {m['ym'].min().strftime('%b %Y')} – {m['ym'].max().strftime('%b %Y')}")
+    st.markdown(f"**{t('Meses únicos')}:** {prep.n_months}")
+    st.markdown(f"**{t('Calibres encontrados')}:** {', '.join(prep.gauges)}")
+    if "color" in m.columns:
+        colors = sorted(m["color"].unique().tolist())
+        st.markdown(f"**{t('Colores encontrados')}:** {', '.join(colors)}")
+    st.markdown(f"**{t('Productos únicos')}:** {m['prod'].nunique()}")
+    st.markdown(f"**{t('Filas mensuales tras agregar')}:** {len(m):,}")
+    st.markdown(f"**{t('Toneladas totales')}:** {m['qty'].sum():,.1f}")
+
+    # Notes from prepare
+    if prep.notes:
+        st.markdown(f"**{t('Notas del procesamiento')}:**")
+        for n in prep.notes:
+            st.markdown(f"- {n}")
+
+
 # ================================================================== sección Datos
 def section_datos():
     st.html(ui.headline(t("Carga tus ventas y el pronóstico se recalcula solo."),
@@ -1161,6 +1201,9 @@ def section_datos():
     if st.session_state.get("data_id") != did:           # datos nuevos: se descartan las correcciones y la configuración del ML
         store().pop("data_edits", None)
         store()["edit_ver"] = store().get("edit_ver", 0) + 1
+        # Reset gauge/color filter chips so stale selections don't filter out new data
+        for _k in ("chips_cal", "chips_color", "_color_gauges"):
+            st.session_state.pop(_k, None)
     st.session_state.update(prep=prep, source=kind, data_id=did)
     base_data = prep
     prep = default_prep()                                  # con las correcciones hechas en esta pestaña
@@ -1184,6 +1227,11 @@ def section_datos():
         st.plotly_chart(ui.bar_fig([ui.mes(x) for x in tot.index], {t("Toneladas"): tot.values}, {t("Toneladas"): ui.RED}, height=260),
                         width="stretch", theme=None, config={"displayModeBar": False})
     data_editor_block(base_data)
+
+    if adv():
+        with st.expander(t("Diagnóstico de carga"), expanded=False):
+            _diag_upload(raw, base_data, dict(mp), kind, name)
+
     st.html(ui.h2(t("Compatible con SAP"), t("Mientras no haya conexión directa, la app lee exportaciones estándar de SAP S/4HANA y reconoce sus nombres de columna.")))
     st.html("<ul class='hint'>" + "".join(f"<li>{esc(t(x))}</li>" for x in (
         "Facturas (VF05, o SE16N sobre VBRK/VBRP): Fe.factura, Material, Texto breve de material, Solicitante, Ctd.facturada o Peso neto.",
