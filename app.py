@@ -707,7 +707,7 @@ def cal_chips(gauges):
         st.session_state[key], st.session_state["_cal_prev"] = v, v
 
     def _fix():
-        new = list(st.session_state[key] or [])
+        new = list(st.session_state.get(key) or [])
         prev = st.session_state.get("_cal_prev", ["Todos"])
         added = [x for x in new if x not in prev]
         if not new or "Todos" in added:
@@ -722,7 +722,7 @@ def cal_chips(gauges):
         st.session_state["_cal_prev"] = new
 
     st.pills(t("Calibre"), opts, selection_mode="multi", key=key, on_change=_fix, format_func=t)
-    sel = st.session_state[key] or ["Todos"]
+    sel = st.session_state.get(key) or ["Todos"]
     store()[key] = sel
     st.caption(t("Puedes elegir varios calibres a la vez."))
     if "Todos" in sel:
