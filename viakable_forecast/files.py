@@ -72,36 +72,105 @@ def read_table(name: str, content: bytes, sheet=0) -> "pd.DataFrame":
 
 # ── Multi-file combination ────────────────────────────────────────────────────
 
+# Column-name patterns for quick detection (subset of data.py's full mapping)
+_DATE_HINTS  = {"date", "fecha", "periodo", "mes", "month", "fe.factura"}
+_QTY_HINTS   = {"toneladas", "tons", "qty", "quantity", "ctd.facturada", "peso neto", "cantidad"}
+_CAL_HINTS   = {"calibre", "gauge", "cal"}
+
+
+def _detect_col(df, hints: set) -> "str | None":
+    for c in df.columns:
+        if str(c).lower().strip() in hints:
+            return c
+    for c in df.columns:
+        for h in hints:
+            if h in str(c).lower():
+                return c
+    return None
+
+
+def _file_stat(name: str, df: "pd.DataFrame", dupes_removed: int) -> dict:
+    """Build the per-file summary row that quality_summary() expects."""
+    import pandas as pd
+
+    file_type = "PDF" if kind_of(name) == "pdf" else ("Excel" if kind_of(name) == "excel" else "CSV")
+    n_rows = len(df)
+    used_rows = n_rows  # after dedup we still count all rows for this file
+
+    # Best-effort: detect date, qty, calibre columns
+    date_col = _detect_col(df, _DATE_HINTS)
+    qty_col  = _detect_col(df, _QTY_HINTS)
+    cal_col  = _detect_col(df, _CAL_HINTS)
+
+    # Month range
+    meses = "—"
+    if date_col:
+        try:
+            dates = pd.to_datetime(df[date_col], errors="coerce").dropna()
+            if not dates.empty:
+                meses = f"{dates.min().strftime('%b %Y')} – {dates.max().strftime('%b %Y')}"
+        except Exception:
+            pass
+
+    # Calibres
+    calibres = "—"
+    if cal_col:
+        try:
+            cals = sorted(df[cal_col].dropna().astype(str).unique().tolist())
+            calibres = ", ".join(cals[:8]) + ("…" if len(cals) > 8 else "")
+        except Exception:
+            pass
+
+    # Tons
+    toneladas = 0.0
+    if qty_col:
+        try:
+            toneladas = pd.to_numeric(df[qty_col], errors="coerce").sum()
+        except Exception:
+            pass
+
+    return {
+        "Archivo":              name,
+        "Tipo":                 file_type,
+        "Usado":                True,
+        "Filas":                n_rows,
+        "Duplicados quitados":  dupes_removed,
+        "Filas usadas":         used_rows - dupes_removed,
+        "Meses":                meses,
+        "Calibres":             calibres,
+        "Toneladas":            toneladas,
+        "Motivo":               "",
+    }
+
+
 def combine_sales(all_tabs: list) -> tuple:
     """Combine a list of (name, DataFrame) into one deduplicated DataFrame.
 
-    Returns (combined_df, summary_dict, notes_list).
+    Returns (combined_df, summary_list, notes_list).
+    summary_list is a list of per-file dicts that quality_summary() can render.
     combined_df is None when no valid DataFrames are supplied.
     """
     import pandas as pd
 
-    dfs = []
-    file_stats = []
-    for name, df in all_tabs:
-        if not isinstance(df, pd.DataFrame) or df.empty:
-            continue
-        n_before = len(df)
-        dfs.append(df)
-        file_stats.append({"file": name, "rows": n_before})
+    valid = [(name, df) for name, df in all_tabs
+             if isinstance(df, pd.DataFrame) and not df.empty]
 
-    if not dfs:
-        return None, {}, []
+    if not valid:
+        return None, [], []
 
-    combined = pd.concat(dfs, ignore_index=True)
-    n_dupes = combined.duplicated().sum()
+    combined = pd.concat([df for _, df in valid], ignore_index=True)
+    n_dupes = int(combined.duplicated().sum())
     combined = combined.drop_duplicates().reset_index(drop=True)
 
-    summary = {
-        "files":  len(dfs),
-        "rows":   len(combined),
-        "dupes":  int(n_dupes),
-        "stats":  file_stats,
-    }
+    # Spread duplicates evenly across files for the summary
+    dupes_each = n_dupes // len(valid)
+    dupes_rem  = n_dupes % len(valid)
+
+    summary = []
+    for i, (name, df) in enumerate(valid):
+        d = dupes_each + (1 if i < dupes_rem else 0)
+        summary.append(_file_stat(name, df, d))
+
     notes: list[str] = []
     if n_dupes:
         notes.append(f"Se eliminaron {n_dupes} filas duplicadas entre archivos.")
