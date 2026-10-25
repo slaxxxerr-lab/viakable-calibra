@@ -333,8 +333,14 @@ def spark_svg(y, f) -> Raw:
     """Mini gráfica: últimos 18 meses (negro) y pronóstico (rojo) sobre zona azul clara."""
     a = np.asarray(y, float)[-18:]
     f = np.asarray(f, float)
+    if len(a) == 0 and len(f) == 0:
+        return Raw('<span class="spark"></span>')
+    if len(a) == 0:
+        a = np.zeros(1)
+    if len(f) == 0:
+        f = np.zeros(1)
     allv = np.concatenate([a, f])
-    mx, mn = max(allv.max(), 1e-9), min(allv.min(), 0) * 0.95
+    mx, mn = max(float(allv.max()), 1e-9), min(float(allv.min()), 0) * 0.95
     W, H, pad = 170, 40, 4
     n = len(allv)
     X = lambda i: pad + i / max(n - 1, 1) * (W - 2 * pad)
