@@ -1286,7 +1286,15 @@ def section_datos():
         try:
             DB.save_prep(name, kind, prep.monthly, list(prep.notes), did)
         except Exception as _db_err:
-            st.toast(t("No se pudo guardar en la base de datos local: {e}", e=_db_err), icon="⚠️")
+            _db_err_str = str(_db_err)
+            # Friendly Spanish message; data still shows for this session
+            st.warning(
+                t("Los datos se cargaron correctamente para esta sesión, pero no se pudieron guardar "
+                  "en la base de datos local (necesitarás volver a subir el archivo la próxima vez que recargues la página).")
+            )
+            if adv():
+                with st.expander(t("Detalles técnicos del error de guardado"), expanded=False):
+                    st.code(_db_err_str)
     base_data = prep
     prep = default_prep()                                  # con las correcciones hechas en esta pestaña
 
