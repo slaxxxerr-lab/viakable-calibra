@@ -25,6 +25,7 @@ from viakable_forecast import llm as LLM
 from viakable_forecast import router as RT
 from viakable_forecast import wiki as WIKI
 from viakable_forecast import crm as CRM
+from viakable_forecast import db as DB
 from viakable_forecast import insights as I
 from viakable_forecast import data as D
 from viakable_forecast import files as F
@@ -144,14 +145,28 @@ def make_did(kind, name, sheet, kg_on, rule_dim, rule_vals) -> str:
 
 
 def base_prep() -> D.Prepared:
-    """Datos cargados (sin ediciones). Si todavía no se visita 'Datos', usa tu CSV local o los datos de ejemplo."""
+    """Datos cargados (sin ediciones). Carga desde SQLite si existe; si no, usa CSV local o datos de ejemplo."""
     if "prep" not in st.session_state:
-        kind = SRC_LOCAL if LOCAL_CSV.exists() else SRC_SAMPLE
-        raw = read_raw(kind)
-        mp = D.SAMPLE_MAPPING if kind == SRC_SAMPLE else D.detect_columns(raw)
-        st.session_state["prep"] = run_prepare(raw, tuple(mp.items()), False, None, ())
-        st.session_state["source"] = kind
-        st.session_state["data_id"] = make_did(kind, "", 0, False, None, ())
+        # 1. Try SQLite first (survives page refreshes)
+        saved = DB.load_prep()
+        if saved is not None:
+            monthly_df, notes, data_id, saved_name = saved
+            gauges = sorted(monthly_df["cal"].unique().tolist(),
+                            key=lambda x: (not x.isdigit(), int(x) if x.isdigit() else 0))
+            n_months = int(monthly_df["ym"].nunique())
+            prep = D.Prepared(monthly=monthly_df, notes=notes, n_months=n_months, gauges=gauges)
+            st.session_state["prep"] = prep
+            st.session_state["source"] = SRC_UPLOAD
+            st.session_state["data_id"] = data_id
+            st.session_state["_db_loaded"] = saved_name
+        else:
+            # 2. Fall back to local CSV or sample data
+            kind = SRC_LOCAL if LOCAL_CSV.exists() else SRC_SAMPLE
+            raw = read_raw(kind)
+            mp = D.SAMPLE_MAPPING if kind == SRC_SAMPLE else D.detect_columns(raw)
+            st.session_state["prep"] = run_prepare(raw, tuple(mp.items()), False, None, ())
+            st.session_state["source"] = kind
+            st.session_state["data_id"] = make_did(kind, "", 0, False, None, ())
     return st.session_state["prep"]
 
 
@@ -1120,11 +1135,53 @@ def _diag_upload(raw: pd.DataFrame, prep, mapping: dict, kind: str, file_name: s
             st.markdown(f"- {n}")
 
 
+# ================================================================== gestión de archivos guardados
+def _file_manager_block():
+    """Muestra los archivos guardados en SQLite y permite eliminarlos o volver a uno anterior."""
+    uploads = DB.list_uploads()
+    if not uploads:
+        return
+    with st.expander(t("Datos guardados (sobreviven al recargar la página)"), expanded=False):
+        st.caption(t("Los datos que subiste se guardan localmente para que no tengas que volver a subirlos cada vez que recargues la página. "
+                     "Solo aplica a esta sesión del servidor."))
+        for u in uploads:
+            gauges_str = ", ".join(u["gauges"])
+            col1, col2, col3 = st.columns([4, 1, 1])
+            status = "✅ " if u["active"] else ""
+            label = f"{status}{u['name'] or u['source']} · {u['n_months']} {t('meses')} · {gauges_str} · {u['tons']:,.0f} t"
+            col1.markdown(label)
+            if not u["active"] and col2.button(t("Usar"), key=f"db_use_{u['id']}", use_container_width=True):
+                try:
+                    DB.set_active(u["id"])
+                    st.session_state.pop("prep", None)
+                    st.session_state.pop("data_id", None)
+                    st.rerun()
+                except Exception as e:
+                    st.error(str(e))
+            if col3.button(t("Borrar"), key=f"db_del_{u['id']}", use_container_width=True):
+                try:
+                    DB.delete_upload(u["id"])
+                    st.session_state.pop("prep", None)
+                    st.session_state.pop("data_id", None)
+                    st.rerun()
+                except Exception as e:
+                    st.error(str(e))
+        if st.button(t("Borrar todos los datos guardados"), key="db_clear_all", type="secondary"):
+            DB.clear_all()
+            st.session_state.pop("prep", None)
+            st.session_state.pop("data_id", None)
+            st.rerun()
+
+
 # ================================================================== sección Datos
 def section_datos():
     st.html(ui.headline(t("Carga tus ventas y el pronóstico se recalcula solo."),
                         t("Sube uno o varios Excel o CSV con el historial de venta, y PDF con tablas si las tienes. La app detecta calibre, unidad de negocio, "
                           "fuerza de venta, cliente, familia y producto, y agrupa todo por mes.")))
+    # Banner when data was auto-loaded from SQLite on this page load
+    db_loaded_name = st.session_state.pop("_db_loaded", None)
+    if db_loaded_name:
+        st.info(t("✓ Datos de \"{n}\" cargados automáticamente. Sube un nuevo archivo para reemplazarlos.", n=db_loaded_name), icon="💾")
     options = ([SRC_LOCAL] if LOCAL_CSV.exists() else []) + [SRC_SAMPLE, SRC_UPLOAD]
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1:
@@ -1205,6 +1262,12 @@ def section_datos():
         for _k in ("chips_cal", "chips_color", "_color_gauges"):
             st.session_state.pop(_k, None)
     st.session_state.update(prep=prep, source=kind, data_id=did)
+    # Persist to SQLite so data survives page refreshes
+    if kind == SRC_UPLOAD:
+        try:
+            DB.save_prep(name, kind, prep.monthly, list(prep.notes), did)
+        except Exception as _db_err:
+            st.toast(t("No se pudo guardar en la base de datos local: {e}", e=_db_err), icon="⚠️")
     base_data = prep
     prep = default_prep()                                  # con las correcciones hechas en esta pestaña
 
@@ -1231,6 +1294,9 @@ def section_datos():
     if adv():
         with st.expander(t("Diagnóstico de carga"), expanded=False):
             _diag_upload(raw, base_data, dict(mp), kind, name)
+
+    # ── Datos guardados (gestión de archivos) ─────────────────────────────────
+    _file_manager_block()
 
     st.html(ui.h2(t("Compatible con SAP"), t("Mientras no haya conexión directa, la app lee exportaciones estándar de SAP S/4HANA y reconoce sus nombres de columna.")))
     st.html("<ul class='hint'>" + "".join(f"<li>{esc(t(x))}</li>" for x in (

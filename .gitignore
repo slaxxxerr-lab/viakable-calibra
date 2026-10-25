@@ -23,6 +23,8 @@ env/
 *.db
 *.sqlite
 *.sqlite3
+data/
+!data/.gitkeep
 
 # Real sales data — never publish
 Viakable_Tons_Sales.xlsx
