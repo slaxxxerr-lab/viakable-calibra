@@ -16,8 +16,15 @@ FOOTER = (
     "que se calibren con datos reales."
 )
 
-TARIFF_CURRENT = 0.50
-TARIFF_ELASTICITY = 0.6
+TARIFF_CURRENT     = 0.50          # decimal fraction used in multiplier math
+TARIFF_RATE_PCT    = 50            # integer % shown in UI sliders (= TARIFF_CURRENT * 100)
+TARIFF_ELASTICITY  = 0.6
+TARIFF_SECTION     = "232"
+TARIFF_EFFECTIVE   = "2026-04-01"  # date rate took effect
+TARIFF_VERIFIED    = "2026-10-24"  # last manually verified date
+TARIFF_SOURCE      = "USTR / Federal Register Vol. 91 (April 2026)"
+TARIFF_APPLIES_TO  = "Cable y alambre de cobre importado desde México a EE. UU."
+PASS_THROUGH_DEFAULT = 80.0        # company assumption: 80% of metal cost change passed to list price
 
 # ── Demand-class descriptions ────────────────────────────────────────────────
 DCLASS_NOTE: dict[str, str] = {
@@ -137,7 +144,8 @@ DEFAULT_PRICES: dict = {
     "cu":  [_CU] * 12,
     "al":  [_AL] * 12,
     "fx":  _FX,
-    "pass_through": 50.0,
+    # NOTE: pass_through and metal_pct are overridden at runtime; see PASS_THROUGH_DEFAULT
+    "pass_through": 80.0,
     "metal_pct":    70.0,
     "cu_ref": 9840.0,
     "al_ref": 2600.0,
@@ -161,5 +169,5 @@ PLAN_DEFAULTS: dict = {
     "metal_chg": 0.0,
     "conv_cu":   5_000.0,
     "conv_al":   4_500.0,
-    "pass_through": 50.0,
+    "pass_through": 80.0,
 }

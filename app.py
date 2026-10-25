@@ -38,8 +38,10 @@ from viakable_forecast import ml as MLm
 from viakable_forecast import planning as PL
 from viakable_forecast import risk as RK
 from viakable_forecast import similar as SM
-from viakable_forecast.config import (APP_NAME, DCLASS_NOTE, DEFAULT_PRICES, FOOTER, METHOD_DESC, MKT_NAC, MKT_USA, PLAN_DEFAULTS,
-                                      SIGNAL_INFO, SIGNAL_PRESETS, SIGNALS, TARIFF_CURRENT, TARIFF_ELASTICITY)
+from viakable_forecast.config import (APP_NAME, DCLASS_NOTE, DEFAULT_PRICES, FOOTER, METHOD_DESC, MKT_NAC, MKT_USA, PASS_THROUGH_DEFAULT,
+                                      PLAN_DEFAULTS, SIGNAL_INFO, SIGNAL_PRESETS, SIGNALS,
+                                      TARIFF_CURRENT, TARIFF_ELASTICITY, TARIFF_RATE_PCT, TARIFF_SECTION,
+                                      TARIFF_EFFECTIVE, TARIFF_VERIFIED, TARIFF_SOURCE)
 
 st.set_page_config(page_title=f"{APP_NAME} · Pronóstico", page_icon="🔴", layout="wide", initial_sidebar_state="collapsed")
 
@@ -446,7 +448,7 @@ def get_params(s=None) -> dict:
             "ddp": bool(s.get("pl_ddp", d["ddp"])), "tariff_scen": float(s.get("t_sce", TARIFF_CURRENT)),
             "base_method": s.get("pl_base", E.AUTO), "cu_path": tuple(round(x, 4) for x in metal_paths(s)["cu"]),
             "al_path": tuple(round(x, 4) for x in metal_paths(s)["al"]), "fx_path": tuple(round(x, 6) for x in metal_paths(s)["fx"]),
-            "pass_through": float(s.get("mt_pass", 50)), "apply_signals": apply_signals_on(s),
+            "pass_through": float(s.get("mt_pass", PASS_THROUGH_DEFAULT)), "apply_signals": apply_signals_on(s),
             "cu_ref": ref_value(s, "cu"), "al_ref": ref_value(s, "al"), "fx_ref": ref_value(s, "fx")}
 
 
@@ -543,6 +545,16 @@ def apply_live():
             v = round(float(q.value), 4 if s == "fx" else 2)
             store()[key] = v
             st.session_state[key] = v
+        elif q is not None and q.status in ("live", "stale") and np.isfinite(q.value):
+            # Even when px_live() is False (manual mode), seed the store with the DB value
+            # so the what-if panel never shows 1.00 or NaN on first load
+            if key not in store() or store()[key] < 5.0:
+                v = round(float(q.value), 4 if s == "fx" else 2)
+                store().setdefault(key, v)
+    # Hard-guard: FX must never be below 5 MXN/USD (obviously wrong)
+    if store().get("pl_fx", 0) < 5.0:
+        store()["pl_fx"] = PLAN_DEFAULTS["fx"]
+        st.session_state["pl_fx"] = PLAN_DEFAULTS["fx"]
     st.session_state["_live_applied"] = live_sig(snap)
 
 
@@ -2117,8 +2129,8 @@ def tariff_card():
         st.html(f'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><h3 style="margin:0;font-size:1.05em;line-height:1.3">'
                 f'{esc(t("Arancel de EE. UU. (Sección 232)"))}</h3><span class="badge {"warn" if eff < 0 else "ok"}">{eff:+.1f}%</span></div>'
                 f'<p class="hint" style="margin:0">{esc(t("Desde abril de 2026 se cobra sobre el valor total del cable importado. Mueve la demanda de exportación según la elasticidad precio."))}</p>')
-        wid(st.slider, t("Arancel actual, ya reflejado en tus ventas"), "t_cur", 50, min_value=0, max_value=60, step=5, format="%d%%")
-        wid(st.slider, t("Arancel en el escenario"), "t_sce", 50, min_value=0, max_value=60, step=5, format="%d%%")
+        wid(st.slider, t("Arancel actual, ya reflejado en tus ventas"), "t_cur", TARIFF_RATE_PCT, min_value=0, max_value=60, step=5, format="%d%%")
+        wid(st.slider, t("Arancel en el escenario"), "t_sce", TARIFF_RATE_PCT, min_value=0, max_value=60, step=5, format="%d%%")
 
         def _set(v):
             store()["t_sce"] = v
@@ -2138,8 +2150,10 @@ def neutral(s: dict) -> dict:
     n = copy.deepcopy(dict(s))
     for name in SIGNALS:
         n[f"chg_{name}"] = 0
-    n["t_sce"] = n.get("t_cur", TARIFF_CURRENT)
+    # Sliders store integer percentages; t_cur defaults to TARIFF_RATE_PCT (50), not the decimal 0.50
+    n["t_sce"] = int(n.get("t_cur", TARIFF_RATE_PCT))
     n["pl_mchg"], n["mt_kind"], n["wi_opp_t"], n["mt_manual"] = 0, "flat", 0.0, None
+    n["mt_pass"] = PASS_THROUGH_DEFAULT
     n["prices"] = copy.deepcopy(DEFAULT_PRICES)
     n.pop("mt_path", None)
     return n
@@ -2184,8 +2198,10 @@ def whatif_strip(items: list, levers: list[str]):
 
 def reset_whatif():
     n = neutral(store())
+    _reset_keys = ("chg_", "t_sce", "pl_mchg", "wi_")
+    _reset_exact = {"prices", "mt_kind", "mt_manual", "mt_pass"}
     for k, v in n.items():
-        if k.startswith(("chg_", "t_sce", "pl_mchg", "wi_")) or k in ("prices", "mt_kind", "mt_manual"):
+        if k.startswith(_reset_keys) or k in _reset_exact:
             store()[k] = v
             if k in st.session_state and k not in ("prices",):
                 st.session_state[k] = v
@@ -2194,6 +2210,11 @@ def reset_whatif():
     store().pop("wi_banner", None)
     st.session_state["wi_open"] = False
     store()["ov_ver"] = sv("ov_ver", 0) + 1
+    # Re-apply live FX/metals so "Volver a la base" picks up current market prices
+    try:
+        apply_live()
+    except Exception:
+        pass
 
 
 def whatif_panel(prep):
@@ -2206,16 +2227,61 @@ def whatif_panel(prep):
                 + (f'<br>{esc(t("Tus datos no distinguen exportaciones a EE. UU.: el arancel no moverá el pronóstico hasta que las marques en Datos."))}' if not (default_prep().monthly["mkt"] == MKT_USA).any() and any("arancel" in c or "tariff" in c for c in b["changes"]) else "")
                 + '</div>')
     with st.expander(t("¿Qué pasa si…?"), expanded=bool(levers) or bool(st.session_state.get("wi_open"))):
+        # ── live market context for captions ───────────────────────────────────
+        snap = live_snapshot()
+        q = snap["q"]
+        def _q(s): return q.get(s)
+        def _val(s, fallback): return float(_q(s).value) if _q(s) and _q(s).status != "none" and np.isfinite(_q(s).value) else fallback
+        def _src(s): return (f"{_q(s).source} · {(_q(s).ts or '')[:10]}" if _q(s) and _q(s).status != "none" else t("último guardado")) if _q(s) else "—"
+        def _stale(s): return _q(s) and _q(s).status == "stale"
+
+        live_fx  = _val("fx", PLAN_DEFAULTS["fx"])
+        live_cu  = _val("cu", PLAN_DEFAULTS["cu_lme"])
+        live_al  = _val("al", PLAN_DEFAULTS["al_lme"])
+
+        # Ensure pl_fx is initialised to the live rate (not 1.00 from a corrupted session)
+        if store().get("pl_fx", 0) < 5.0:
+            store()["pl_fx"] = live_fx
+            st.session_state["pl_fx"] = live_fx
+
+        import datetime as _dt
+        try:
+            days_since_verified = (_dt.date.today() - _dt.date.fromisoformat(TARIFF_VERIFIED)).days
+        except Exception:
+            days_since_verified = 0
+
         c = st.columns(4, gap="medium")
         with c[0]:
-            wid(st.slider, t("Arancel en el escenario"), "t_sce", 50, min_value=0, max_value=60, step=5, format="%d%%")
+            wid(st.slider, t("Arancel en el escenario"), "t_sce", TARIFF_RATE_PCT, min_value=0, max_value=60, step=5, format="%d%%")
+            tariff_note = f"Vigente: {TARIFF_RATE_PCT}% · Sección {TARIFF_SECTION} · verificado {TARIFF_VERIFIED}"
+            if days_since_verified > 30 and adv():
+                tariff_note += f" · ⚠️ {t('Verifica que el arancel siga vigente.')}"
+            st.caption(tariff_note)
         with c[1]:
-            wid(st.slider, t("Precio del metal"), "pl_mchg", 0, min_value=-30, max_value=30, step=1, format="%+d%%")
+            pct = wid(st.slider, t("Precio del metal"), "pl_mchg", 0, min_value=-30, max_value=30, step=1, format="%+d%%")
+            cu_shown = live_cu * (1 + pct / 100)
+            al_shown = live_al * (1 + pct / 100)
+            metal_lbl = f"Cobre: ${live_cu:,.0f} · Aluminio: ${live_al:,.0f} USD/t · {_src('cu')}"
+            if _stale("cu"):
+                metal_lbl += f" · ⚠️ {t('precio antiguo')}"
+            st.caption(metal_lbl)
+            if pct != 0:
+                st.caption(f"{pct:+d}% → Cobre ${cu_shown:,.0f} · Aluminio ${al_shown:,.0f} USD/t")
         with c[2]:
-            wid(st.number_input, t("Tipo de cambio (MXN por USD)"), "pl_fx", 18.5, min_value=1.0, step=0.1, disabled=px_disabled("fx"))
+            fx_src = _src("fx")
+            if _stale("fx"):
+                fx_src += f" · ⚠️ {t('dato antiguo')}"
+            wid(st.number_input, t("Tipo de cambio (MXN por USD)"), "pl_fx", live_fx, min_value=5.0, max_value=30.0, step=0.05)
+            st.caption(f"{fx_src}")
         with c[3]:
-            wid(st.slider, t("Traspaso del metal al precio de venta"), "mt_pass", 50, min_value=0, max_value=100, step=5, format="%d%%")
+            wid(st.slider, t("Traspaso del metal al precio de venta"), "mt_pass", PASS_THROUGH_DEFAULT,
+                min_value=0, max_value=100, step=5, format="%d%%")
+            st.caption(t("Supuesto de la empresa: {n}%", n=int(PASS_THROUGH_DEFAULT)))
+
         gs = list(prep.gauges)
+        # Default calibre = currently selected gauge (first non-Todos selection)
+        cur_sel = store().get("chips_cal") or ["Todos"]
+        default_cal = gs[0] if "Todos" in cur_sel else (cur_sel[0] if cur_sel[0] in gs else gs[0])
         d = st.columns([1.3, 1, 1, 1, 1], gap="medium") if adv() else [None, None, *st.columns(3, gap="medium")]
         if adv():
             with d[0]:
@@ -2223,7 +2289,7 @@ def whatif_panel(prep):
             with d[1]:
                 wid(st.slider, t("Cambio esperado"), f"chg_{name}", 0, min_value=-30, max_value=30, step=1, format="%+d%%")
         with d[2]:
-            wid(st.selectbox, t("Pedido adicional en el calibre"), "wi_opp_cal", gs[min(2, len(gs) - 1)], options=gs, format_func=ui.cal_label)
+            wid(st.selectbox, t("Pedido adicional en el calibre"), "wi_opp_cal", default_cal, options=gs, format_func=ui.cal_label)
         with d[3]:
             wid(st.number_input, t("Toneladas por mes"), "wi_opp_t", 0.0, min_value=0.0, step=5.0)
         with d[4]:
@@ -2294,8 +2360,8 @@ def section_metales():
                 wid(st.number_input, t("Aluminio de referencia (USD/t)"), "mt_ref_al", ref_value(None, "al"), min_value=0.0, step=10.0)
                 wid(st.number_input, t("Tipo de cambio de referencia"), "mt_ref_fx", ref_value(None, "fx"), min_value=1.0, step=0.1)
 
-        wid(st.slider, t("Traspaso del metal al precio de venta"), "mt_pass", 50, min_value=0, max_value=100, step=5, format="%d%%")
-        st.caption(t("Qué parte de un cambio en el costo del metal se traslada al precio de lista. Con 0% el margen absorbe todo."))
+        wid(st.slider, t("Traspaso del metal al precio de venta"), "mt_pass", PASS_THROUGH_DEFAULT, min_value=0, max_value=100, step=5, format="%d%%")
+        st.caption(t("Qué parte de un cambio en el costo del metal se traslada al precio de lista. Con 0% el margen absorbe todo. Supuesto de la empresa: {n}%.", n=int(PASS_THROUGH_DEFAULT)))
         st.html(ui.group_title(t("Camino de precios, 12 meses")))
         kinds = ["flat", "pct", "manual"] + (["trend"] if hist is not None else [])
         klabel = {"flat": "Precio actual constante", "pct": "Escenario en %", "manual": "Tabla mes por mes", "trend": "Tendencia del histórico"}
