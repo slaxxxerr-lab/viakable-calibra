@@ -650,7 +650,14 @@ def alert_impact(series: str, pct: float) -> float:
     """Estimación rápida del cambio en el margen de los próximos 6 meses si el precio se queda en ese movimiento (sin entrenar modelos)."""
     m = default_prep().monthly
     last = m[m["ym"] > m["ym"].max() - pd.DateOffset(months=6)]
-    tons = last.loc[last["metal"] == ("Aluminio" if series == "al" else "Cobre"), "qty"].sum()          # toneladas de los últimos 6 meses ~ próximos 6
+    metal_name = "Aluminio" if series == "al" else "Cobre"
+    if "metal" in last.columns:
+        tons = last.loc[last["metal"] == metal_name, "qty"].sum()
+    else:
+        # Derive on the fly if column was stripped (e.g. old SQLite row)
+        metal_mask = last["fam"].str.contains("AL", case=False, na=False) if "fam" in last.columns else pd.Series(False, index=last.index)
+        tons = last.loc[metal_mask if series == "al" else ~metal_mask, "qty"].sum()
+    tons = tons or last["qty"].sum()   # fallback: total tons if filter returns zero
     p = get_params()
     price = float(store().get(PX_KEY[series], 0))
     cost = tons * p["metal_pct"] / 100 * price * float(store().get("pl_fx", PLAN_DEFAULTS["fx"]))

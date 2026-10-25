@@ -26,8 +26,8 @@ logger = logging.getLogger(__name__)
 _DB_DIR = Path(__file__).parent.parent / "data"
 _DB_PATH = _DB_DIR / "calibra.db"
 
-# Monthly DataFrame columns (must match data.prepare() output)
-_MONTHLY_COLS = ["ym", "cal", "seg", "ch", "cli", "fam", "prod", "prod_name", "mkt_raw", "mkt", "qty"]
+# Monthly DataFrame columns (must match data.prepare() output, including derived columns)
+_MONTHLY_COLS = ["ym", "cal", "seg", "ch", "cli", "fam", "prod", "prod_name", "mkt_raw", "mkt", "metal", "qty"]
 
 # ── Schema ────────────────────────────────────────────────────────────────────
 _SCHEMA = """
@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS monthly (
     prod_name   TEXT    NOT NULL DEFAULT '',
     mkt_raw     TEXT    NOT NULL DEFAULT '',
     mkt         TEXT    NOT NULL DEFAULT '',
+    metal       TEXT    NOT NULL DEFAULT 'Cobre',
     qty         REAL    NOT NULL DEFAULT 0
 );
 
@@ -179,6 +180,11 @@ def load_prep() -> "tuple[pd.DataFrame, list[str], str, str] | None":
         monthly = pd.DataFrame(rows, columns=_MONTHLY_COLS)
         monthly["ym"] = pd.to_datetime(monthly["ym"])
         monthly["qty"] = pd.to_numeric(monthly["qty"], errors="coerce").fillna(0.0)
+        # Re-derive metal if column is empty/missing (backwards compat with old DB rows)
+        if "metal" not in monthly.columns or monthly["metal"].eq("").all():
+            monthly["metal"] = monthly["fam"].str.contains("AL", case=False, na=False).map(
+                {True: "Aluminio", False: "Cobre"}
+            )
         return monthly, notes, data_id, name
     except Exception as e:
         logger.warning("Could not load from DB: %s", e)
