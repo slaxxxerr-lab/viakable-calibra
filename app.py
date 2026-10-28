@@ -5501,7 +5501,14 @@ def main():
         ui.REDUCED_MOTION = st.context.cookies.get("vk_rm") == "1"
     except Exception:
         ui.REDUCED_MOTION = False
-    sys_dark = getattr(st.context.theme, "type", None) == "dark"
+    # sys_dark: prefer the browser's own preference (vk_dark cookie, set by ENGINE_JS
+    # from the parent page's computed --bg) over st.context.theme.type, which reflects
+    # the Streamlit app theme setting (often "base"/light on Cloud even in dark browser).
+    try:
+        _browser_dark = st.context.cookies.get("vk_dark") == "1"
+    except Exception:
+        _browser_dark = False
+    sys_dark = _browser_dark or (getattr(st.context.theme, "type", None) == "dark")
     dark = ui.configure(cfg, sys_dark)
     set_unit(cfg["unit"])
     flip = cfg["theme"] != "system" and dark != sys_dark

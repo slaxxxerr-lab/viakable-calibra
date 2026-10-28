@@ -64,6 +64,7 @@ ENGINE_JS = """<script>
   if (window.__vkEngine) return; window.__vkEngine = true;
   var RM = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : {matches:false};
   try { document.cookie = 'vk_rm=' + (RM.matches ? 1 : 0) + ';path=/;max-age=31536000;SameSite=Lax'; } catch(e) {}
+  try { var _pd=window.parent?window.parent.document:document; var _bg=getComputedStyle(_pd.documentElement).getPropertyValue('--bg').trim(); var _isDark=_bg==='#000000'||_bg==='rgb(0,0,0)'; document.cookie='vk_dark='+(_isDark?1:0)+';path=/;max-age=31536000;SameSite=Lax'; } catch(e) {}
   var last = {}, lastPx = {};
   function on(){ var c = document.getElementById('vk-cfg'); return !RM.matches && !(c && c.dataset.anim === 'off'); }
   function fmt(v, d){ return v.toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d}); }
@@ -435,7 +436,7 @@ def forecast_fig(hist_idx, hist, f_idx, fc, lo, hi, unit="t", main_label=None, c
                              fill="tozeroy", fillcolor=_rgba(FG, .07), hovertemplate="%{x}: %{customdata}<extra>" + lbl_real + "</extra>",
                              customdata=[fmtv(v) for v in hv]))
     if trend:
-        fig.add_trace(go.Scatter(x=labels, y=ma, mode="lines", name=t("Tendencia (promedio 12 meses)"), line=dict(color=MUTED, width=2, dash="dot"), hoverinfo="skip"))
+        fig.add_trace(go.Scatter(x=labels[:nh], y=ma[:nh], mode="lines", name=t("Tendencia (promedio 12 meses)"), line=dict(color=MUTED, width=2, dash="dot"), hoverinfo="skip"))
     for k, (nm, vals) in enumerate(compare or []):
         col, dash = COMPARE_STYLE[k % len(COMPARE_STYLE)]
         fig.add_trace(go.Scatter(x=jx, y=[hv[-1], *vals], mode="lines", name=nm, line=dict(color=col, width=2, dash=dash),
