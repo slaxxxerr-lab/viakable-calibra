@@ -5077,12 +5077,12 @@ ASST_SUGGESTIONS = ["¿Qué pasa si el cobre sube 10%?", "¿Por qué cambió el 
 
 
 # ================================================================== 8C: riesgo y decisiones
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, version="2")
 def cached_vol(hist, fx_daily) -> dict:
     return RK.price_vol(hist, fx_daily)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, version="2")
 def cached_cal(monthly, gauges, h, _rows) -> dict:
     return RK.calibrate(_rows)
 
