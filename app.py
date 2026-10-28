@@ -5174,12 +5174,12 @@ def section_riesgo():
         with c[0]:
             st.html(ui.h2(t("Distribución del margen"), t("Millones de MXN. Rayas: P5, esperado y P95.")))
             st.plotly_chart(ui.hist_fig(o["margin"] / 1e6, [(s["p5"] / 1e6, "P5", ui.FG), (s["mean"] / 1e6, t("Esperado"), ui.RED), (s["p95"] / 1e6, "P95", ui.MUTED)], height=300),
-                            width="stretch", theme=None, config={"displayModeBar": False})
+                            key="rk_hist_margin", width="stretch", theme=None, config={"displayModeBar": False})
         with c[1]:
             sr = RK.summarize(o["revenue"])
             st.html(ui.h2(t("Distribución del ingreso"), t("Millones de MXN. P5 {a}, esperado {b}, P95 {c}.", a=f"{sr['p5'] / 1e6:,.0f}", b=f"{sr['mean'] / 1e6:,.0f}", c=f"{sr['p95'] / 1e6:,.0f}")))
             st.plotly_chart(ui.hist_fig(o["revenue"] / 1e6, [(sr["p5"] / 1e6, "P5", ui.FG), (sr["mean"] / 1e6, t("Esperado"), ui.RED), (sr["p95"] / 1e6, "P95", ui.MUTED)], height=300),
-                            width="stretch", theme=None, config={"displayModeBar": False})
+                            key="rk_hist_revenue", width="stretch", theme=None, config={"displayModeBar": False})
         st.html(f'<p class="syncnote">{esc(t("Margen en riesgo = margen esperado menos el percentil 5: lo que se puede perder en un mal escenario de cada 20. En el peor 5% el margen promedia {x}.", x=ui.mxn(s["cvar"])))}</p>')
         # volatilidad y supuestos
         with st.expander(t("Supuestos de la simulación")):
@@ -5214,7 +5214,7 @@ def risk_bands_block(ctx, n: int):
     hist = E.series(m, [sel] if sel != "Todos" else None)
     idx = pd.date_range(m["ym"].max() + pd.offsets.MonthBegin(1), periods=setup.H, freq="MS")
     st.plotly_chart(ui.forecast_fig(list(hist.index), hist.values, list(idx), b["p50"], b["p10"], b["p90"], ui.UNIT, "P50", height=330, compare=[(t("Pronóstico"), fc)]),
-                    width="stretch", theme=None, config={"displayModeBar": False})
+                    key="rk_bands_fc", width="stretch", theme=None, config={"displayModeBar": False})
     tb = [[ui.mes(x), f"{b['p10'][i]:,.0f}", f"{b['p50'][i]:,.0f}", f"{b['p90'][i]:,.0f}", f"{fc[i]:,.0f}"] for i, x in enumerate(idx)]
     tb.append([Raw(f"<b>{esc(t('Total'))}</b>"), f"{b['tot_p10']:,.0f}", f"{b['tot_p50']:,.0f}", f"{b['tot_p90']:,.0f}", f"{fc.sum():,.0f}"])
     st.html(ui.table([t("Mes"), "P10", "P50", "P90", t("Pronóstico")], tb, num=(1, 2, 3, 4), main_rows=(len(tb) - 1,)))
@@ -5240,7 +5240,7 @@ def risk_purchase_block(ctx, o):
                                                     k=k, a=f"{nv['p10']:,.0f}", b=f"{nv['p90']:,.0f}", c=f"{nv['median']:,.0f}", u=ui.mxn(nv["under_cost"]), v=ui.mxn(nv["over_cost"]), p=f"{nv['critical_ratio'] * 100:.0f}", q=f"{nv['q_star']:,.0f}", x=ui.mxn(extra)))}</p>')
         with c[1]:
             st.plotly_chart(ui.line_fig(nv["curve_q"], nv["curve_cost"] / 1e6, [(nv["q_star"], t("Óptimo"), ui.RED), (nv["median"], t("Mediana"), ui.MUTED)], height=240, xtitle=f"{t('Toneladas compradas hoy')}", ytitle=t("Costo esperado (M MXN)"), yfmt=",.2f"),
-                            width="stretch", theme=None, config={"displayModeBar": False})
+                            key=f"rk_nv_{key}", width="stretch", theme=None, config={"displayModeBar": False})
     st.html(f'<p class="syncnote">{esc(t("Faltante = recargo de comprar de urgencia (ajustable). Sobrante = costo anual de mantener inventario por los meses que cubre la compra. La necesidad es la producción del plan más la desviación de la demanda simulada. No incluye descuentos por volumen ni coberturas: es una guía de cantidad, no de momento (para el momento, ve Metales).")) }</p>')
 
 
@@ -5267,7 +5267,7 @@ def risk_hedge_block(ctx, sm):
                      (f"{best['cobertura'] * 100:.0f}%", t("Cobertura con menos riesgo"), t("riesgo {x}", x=ui.mxn(best["en_riesgo"]))),
                      (ui.mxn(row["media"] - float(hs.loc[hs["cobertura"] == 0, "media"].iloc[0])), t("Cambio del margen esperado"), t("por el costo de la cobertura"))]))
     st.plotly_chart(ui.line_fig(hs["cobertura"] * 100, hs["en_riesgo"] / 1e6, [(sel * 100, t("Tu cobertura"), ui.RED), (best["cobertura"] * 100, t("Mínimo riesgo"), ui.MUTED)], height=280, xtitle=t("% de las compras fijado hoy"), ytitle=t("Margen en riesgo (M MXN)"), yfmt=",.0f"),
-                    width="stretch", theme=None, config={"displayModeBar": False})
+                    key="rk_hedge_sweep", width="stretch", theme=None, config={"displayModeBar": False})
     st.html(f'<p class="syncnote">{esc(t("Cubrir todo no es lo mejor: con un traspaso de {pt}% del metal al precio de venta, ya trasladas esa parte del riesgo a tus clientes, y la cobertura que menos riesgo deja ronda {o}%. Se fija el precio de compra del metal (en USD); el tipo de cambio sigue flotando. Es una simulación, no una oferta de cobertura.", pt=f"{p.pass_through:.0f}", o=f"{max(0, 100 - p.pass_through):.0f}"))}</p>')
 
 
