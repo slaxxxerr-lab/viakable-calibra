@@ -5183,7 +5183,10 @@ def section_riesgo():
         st.html(f'<p class="syncnote">{esc(t("Margen en riesgo = margen esperado menos el percentil 5: lo que se puede perder en un mal escenario de cada 20. En el peor 5% el margen promedia {x}.", x=ui.mxn(s["cvar"])))}</p>')
         # volatilidad y supuestos
         with st.expander(t("Supuestos de la simulación")):
-            rows = [[t("Cobre"), f"{vol['sigma']['cu'] * 100:.1f}%", _vol_src(vol["source"]["cu"])], [t("Aluminio"), f"{vol['sigma']['al'] * 100:.1f}%", _vol_src(vol["source"]["al"])], ["USD/MXN", f"{vol['sigma']['fx'] * 100:.1f}%", _vol_src(vol["source"]["fx"])]]
+            # Support both nested {sigma: {cu:…}} and legacy flat {cu_vol:…} shapes
+            _sig = vol.get("sigma") or {"cu": vol.get("cu_vol", 0.0), "al": vol.get("al_vol", 0.0), "fx": vol.get("fx_vol", 0.0)}
+            _src = vol.get("source") or {"cu": vol.get("src", "sin datos"), "al": vol.get("src", "sin datos"), "fx": vol.get("src", "sin datos")}
+            rows = [[t("Cobre"), f"{_sig['cu'] * 100:.1f}%", _vol_src(_src["cu"])], [t("Aluminio"), f"{_sig['al'] * 100:.1f}%", _vol_src(_src["al"])], ["USD/MXN", f"{_sig['fx'] * 100:.1f}%", _vol_src(_src["fx"])]]
             st.html(ui.table([t("Serie"), t("Volatilidad mensual"), t("Origen")], rows, num=(1,)))
             st.html(f'<p class="syncnote">{esc(t("Los precios siguen una caminata aleatoria lognormal alrededor del camino de Metales (sin tendencia propia), con la correlación histórica entre ellos. La demanda es el pronóstico más errores tomados al azar de la validación cruzada de todos los calibres, ensanchados {c}x para que en validación {v}% de los meses reales caiga dentro de P10 a P90 (sin ensanchar: {r}%). Con tan pocas ventanas, las colas son una aproximación.", c=f"{cal['inflate']:.1f}", v=f"{cal['coverage']:.0f}", r=f"{cal['coverage_raw']:.0f}"))}</p>')
             if not any(setup.rows["is_exp"]):
