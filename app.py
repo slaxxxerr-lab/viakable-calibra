@@ -4274,7 +4274,7 @@ def tool_risk(a):
     res = {"horizon_months": h, "simulations": rs["n"], "margin_mxn": {"expected": _r(s["mean"], 0), "p5": _r(s["p5"], 0), "p50": _r(s["p50"], 0), "p95": _r(s["p95"], 0), "at_risk_expected_minus_p5": _r(s["at_risk"], 0)},
            "prob_margin_below_threshold_pct": _r(s["prob_below"] * 100, 1), "threshold_mxn": _r(rs["thr"], 0),
            "hedge": {"fixed_pct": _r(rs["frac"] * 100, 0), "months": min(int(sv("rk_hm", h)), h), "margin_p5_with_hedge_mxn": _r(hd["p5"], 0), "margin_at_risk_with_hedge_mxn": _r(hd["at_risk"], 0)},
-           "optimal_purchase": nvs, "calibration": {"band_inflation": _r(ctx["cal"]["inflate"], 1), "coverage_p10_p90_pct": _r(ctx["cal"]["coverage"], 0), "coverage_before_pct": _r(ctx["cal"]["coverage_raw"], 0)},
+           "optimal_purchase": nvs, "calibration": {"band_inflation": _r(ctx["cal"]["inflate"], 1), "coverage_p10_p90_pct": _r(ctx["cal"].get("coverage", 0), 0), "coverage_before_pct": _r(ctx["cal"].get("coverage_raw", ctx["cal"].get("coverage", 0)), 0)},
            "note": "Supuestos ajustables en la sección Riesgo; precios y costos ilustrativos; con pocas ventanas de validación las colas son una aproximación."}
     fig = ui.hist_fig(o["margin"] / 1e6, [(s["p5"] / 1e6, "P5", ui.FG), (s["mean"] / 1e6, t("Esperado"), ui.RED)], height=280)
     return res, {"type": "fig", "title": t("Distribución del margen"), "fig": fig}
@@ -5188,7 +5188,7 @@ def section_riesgo():
             _src = vol.get("source") or {"cu": vol.get("src", "sin datos"), "al": vol.get("src", "sin datos"), "fx": vol.get("src", "sin datos")}
             rows = [[t("Cobre"), f"{_sig['cu'] * 100:.1f}%", _vol_src(_src["cu"])], [t("Aluminio"), f"{_sig['al'] * 100:.1f}%", _vol_src(_src["al"])], ["USD/MXN", f"{_sig['fx'] * 100:.1f}%", _vol_src(_src["fx"])]]
             st.html(ui.table([t("Serie"), t("Volatilidad mensual"), t("Origen")], rows, num=(1,)))
-            st.html(f'<p class="syncnote">{esc(t("Los precios siguen una caminata aleatoria lognormal alrededor del camino de Metales (sin tendencia propia), con la correlación histórica entre ellos. La demanda es el pronóstico más errores tomados al azar de la validación cruzada de todos los calibres, ensanchados {c}x para que en validación {v}% de los meses reales caiga dentro de P10 a P90 (sin ensanchar: {r}%). Con tan pocas ventanas, las colas son una aproximación.", c=f"{cal['inflate']:.1f}", v=f"{cal['coverage']:.0f}", r=f"{cal['coverage_raw']:.0f}"))}</p>')
+            st.html(f'<p class="syncnote">{esc(t("Los precios siguen una caminata aleatoria lognormal alrededor del camino de Metales (sin tendencia propia), con la correlación histórica entre ellos. La demanda es el pronóstico más errores tomados al azar de la validación cruzada de todos los calibres, ensanchados {c}x para que en validación {v}% de los meses reales caiga dentro de P10 a P90 (sin ensanchar: {r}%). Con tan pocas ventanas, las colas son una aproximación.", c=f"{cal['inflate']:.1f}", v=f"{cal.get('coverage', 0):.0f}", r=f"{cal.get('coverage_raw', cal.get('coverage', 0)):.0f}"))}</p>')
             if not any(setup.rows["is_exp"]):
                 st.html(f'<p class="syncnote">{esc(t("Tus datos no tienen ventas de exportación definidas, así que el arancel no afecta esta simulación."))}</p>')
         risk_bands_block(ctx, int(n))
@@ -5221,7 +5221,7 @@ def risk_bands_block(ctx, n: int):
     tb = [[ui.mes(x), f"{b['p10'][i]:,.0f}", f"{b['p50'][i]:,.0f}", f"{b['p90'][i]:,.0f}", f"{fc[i]:,.0f}"] for i, x in enumerate(idx)]
     tb.append([Raw(f"<b>{esc(t('Total'))}</b>"), f"{b['tot_p10']:,.0f}", f"{b['tot_p50']:,.0f}", f"{b['tot_p90']:,.0f}", f"{fc.sum():,.0f}"])
     st.html(ui.table([t("Mes"), "P10", "P50", "P90", t("Pronóstico")], tb, num=(1, 2, 3, 4), main_rows=(len(tb) - 1,)))
-    st.html(f'<p class="syncnote">{esc(t("P50 puede diferir del pronóstico porque en la validación los errores tuvieron un sesgo promedio. Con los errores sin ensanchar, {r}% de los meses reales caía dentro de P10 a P90; ensanchados, {v}%.", r=f"{cal['coverage_raw']:.0f}", v=f"{cal['coverage']:.0f}"))}</p>')
+    st.html(f'<p class="syncnote">{esc(t("P50 puede diferir del pronóstico porque en la validación los errores tuvieron un sesgo promedio. Con los errores sin ensanchar, {r}% de los meses reales caía dentro de P10 a P90; ensanchados, {v}%.", r=f"{cal.get('coverage_raw', cal.get('coverage', 0)):.0f}", v=f"{cal.get('coverage', 0):.0f}"))}</p>')
 
 
 def risk_purchase_block(ctx, o):
