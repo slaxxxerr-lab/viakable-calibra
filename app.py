@@ -1590,16 +1590,16 @@ def section_pronostico():
 
         gc1, gc2, gc3, gc4 = st.columns(4)
         with gc1:
-            _c = "#22c55e" if _precision >= 85 else ("#f59e0b" if _precision >= 70 else RED)
+            _c = "#22c55e" if _precision >= 85 else ("#f59e0b" if _precision >= 70 else ui.RED)
             st.html(ui.gauge_tile_html(t("Precisión"), f"{_precision:.1f}%", _precision / 100.0, _c))
         with gc2:
-            _c = "#22c55e" if abs(_sesgo) < 10 else ("#f59e0b" if abs(_sesgo) < 20 else RED)
+            _c = "#22c55e" if abs(_sesgo) < 10 else ("#f59e0b" if abs(_sesgo) < 20 else ui.RED)
             _p = max(0.0, min(1.0, (50.0 - abs(_sesgo)) / 50.0))
             st.html(ui.gauge_tile_html(t("Sesgo"), f"{_sesgo:+.1f}%", _p, _c, t("0% = sin sesgo")))
         with gc3:
             st.html(ui.gauge_tile_html(t("Cobertura 80%"), "≈80%", 0.80, "#22c55e", t("diseñado para 80%")))
         with gc4:
-            _c = "#22c55e" if _yoy_v >= 0 else RED
+            _c = "#22c55e" if _yoy_v >= 0 else ui.RED
             _p = max(0.0, min(1.0, (_yoy_v + 50.0) / 100.0))
             _arr = "▲ " if _yoy_v >= 0 else "▼ "
             st.html(ui.gauge_tile_html(t("Cambio YoY"), f"{_arr}{abs(_yoy_v):.1f}%", _p, _c))
