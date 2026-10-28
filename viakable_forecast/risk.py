@@ -46,9 +46,12 @@ def summarize(margin: np.ndarray, threshold: float = 0.0) -> dict:
     mean = float(np.mean(margin)) if len(margin) else 0.0
     p5   = float(np.percentile(margin, 5)) if len(margin) else 0.0
     prob = float(np.mean(margin < threshold)) if len(margin) else 0.0
+    worst = margin[margin <= p5] if len(margin) else np.array([0.0])
+    cvar = float(np.mean(worst)) if len(worst) else p5
+    at_risk = mean - p5
     return {
         "mean": mean, "p5": p5, "p95": float(np.percentile(margin, 95)) if len(margin) else 0.0,
-        "prob_below": prob, "mar": mean - p5,
+        "prob_below": prob, "mar": at_risk, "at_risk": at_risk, "cvar": cvar,
     }
 
 
