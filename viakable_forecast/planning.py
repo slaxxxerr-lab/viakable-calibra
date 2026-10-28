@@ -55,7 +55,7 @@ class PlanResult:
 _ROW_COLS = [
     "cal", "mkt", "is_exp", "metal", "mean", "error",
     "ss", "rop", "inv", "prod_t", "price", "rev", "margin",
-    "freed", "metal_req", "prod", "vol",
+    "freed", "metal_req", "prod", "vol", "fc",
 ]
 _CAP_COLS = ["cal", "over", "cap", "util", "deficit"]
 
@@ -117,6 +117,7 @@ def plan(monthly, gauges, horizon, params, prices, mult, sig, w,
             "metal_req": np.zeros(h),
             "prod":     np.zeros(h),
             "vol":      0.0,
+            "fc":       np.zeros(h),
         })
     rows = (pd.DataFrame(rows_data, columns=_ROW_COLS)
             if rows_data
