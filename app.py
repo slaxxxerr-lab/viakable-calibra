@@ -1577,6 +1577,34 @@ def section_pronostico():
                            dir=t("arriba") if d_t >= 0 else t("abajo"))
         if yoy is not None:
             sub += " " + t("Queda {p}% {dir} del mismo periodo del año anterior.", p=f"{abs(yoy):.1f}", dir=t("arriba") if yoy >= 0 else t("abajo"))
+
+        # ── Row 1: accuracy gauge tiles ──────────────────────
+        _precision = max(0.0, 100.0 - pr.error) if np.isfinite(pr.error) else 0.0
+        _eff_m = best_name if method == E.AUTO else method
+        _sesgo = 0.0
+        if not bt.empty and _eff_m in bt["Método"].values:
+            _sr = bt.loc[bt["Método"] == _eff_m, "Sesgo %"]
+            if not _sr.empty and np.isfinite(float(_sr.iloc[0])):
+                _sesgo = float(_sr.iloc[0])
+        _yoy_v = float(yoy) if yoy is not None and np.isfinite(float(yoy)) else 0.0
+
+        gc1, gc2, gc3, gc4 = st.columns(4)
+        with gc1:
+            _c = "#22c55e" if _precision >= 85 else ("#f59e0b" if _precision >= 70 else RED)
+            st.html(ui.gauge_tile_html(t("Precisión"), f"{_precision:.1f}%", _precision / 100.0, _c))
+        with gc2:
+            _c = "#22c55e" if abs(_sesgo) < 10 else ("#f59e0b" if abs(_sesgo) < 20 else RED)
+            _p = max(0.0, min(1.0, (50.0 - abs(_sesgo)) / 50.0))
+            st.html(ui.gauge_tile_html(t("Sesgo"), f"{_sesgo:+.1f}%", _p, _c, t("0% = sin sesgo")))
+        with gc3:
+            st.html(ui.gauge_tile_html(t("Cobertura 80%"), "≈80%", 0.80, "#22c55e", t("diseñado para 80%")))
+        with gc4:
+            _c = "#22c55e" if _yoy_v >= 0 else RED
+            _p = max(0.0, min(1.0, (_yoy_v + 50.0) / 100.0))
+            _arr = "▲ " if _yoy_v >= 0 else "▼ "
+            st.html(ui.gauge_tile_html(t("Cambio YoY"), f"{_arr}{abs(_yoy_v):.1f}%", _p, _c))
+
+        # ── Whatif / levers ──────────────────────────────────
         edits_note()
         whatif_panel(prep)
         levers = changed_levers()
@@ -1587,6 +1615,8 @@ def section_pronostico():
             whatif_strip([delta_chip(t("Pronóstico {h} meses", h=horizon), float(fc.sum()), float(bpr.fc.sum()), fv)], levers)
         else:
             whatif_strip([], [])
+
+        # ── Headline + KPIs ──────────────────────────────────
         with st.container(key="result"):
             st.html(ui.headline(head, sub))
             st.html(f'<p class="hint" style="margin:-14px 0 18px">{esc(t("Tipo de demanda:"))} {ui.dclass_html(cls)} · {esc(t(DCLASS_NOTE.get(cls, "")))}</p>')
@@ -1595,7 +1625,16 @@ def section_pronostico():
                              (fv(fc.sum()), t("Venta total {h} meses ({u})", h=horizon, u=unit)),
                              (Raw(f"{max(0, 100 - pr.error):.1f}%"), t("Precisión en prueba histórica"), acc),
                              (f"{fv(lo[0])} – {fv(hi[0])}", t("Rango del 80% del próximo mes"))], cols=4))
-        fig_slot = st.container()
+
+        # ── Row 3: chart + donut (multi-caliber) or chart alone ──
+        _multi_cal = len(pr.detail) > 1
+        if _multi_cal:
+            _c_chart, _c_donut = st.columns([3, 2])
+            fig_slot = _c_chart.container()
+            _donut_slot: st.container | None = _c_donut.container()
+        else:
+            fig_slot = st.container()
+            _donut_slot = None
         ctl_slot = st.container()
 
         cons = None
@@ -1635,9 +1674,29 @@ def section_pronostico():
                     cmp_names = st.pills(t("Comparar con otros métodos"), opts, selection_mode="multi", key="chips_cmp", format_func=t) or []
         marks = atypical_marks(det, allg, hist) if A else []
         compare = [(t(n), cached_project(m_view, tuple(tuple(x) for x in units), market, horizon, n, measure, mode, mult, sig, w, prices, ml, get_crm(None, measure, prices), apply_signals_on()).fc) for n in cmp_names]
+
         with fig_slot:
-            st.plotly_chart(ui.forecast_fig(list(hist.index), hist.values, list(pr.index), fc, lo, hi, unit, main_name, cons, money=money,
-                                            trend=show_trend, compare=compare, marks=marks), width="stretch", theme=None, config={"displayModeBar": False})
+            if _multi_cal:
+                st.plotly_chart(
+                    ui.stacked_area_fig(pr.detail, list(hist.index), list(pr.index), lo, hi, unit),
+                    width="stretch", theme=None, config={"displayModeBar": False},
+                )
+            else:
+                st.plotly_chart(ui.forecast_fig(list(hist.index), hist.values, list(pr.index), fc, lo, hi, unit, main_name, cons, money=money,
+                                                trend=show_trend, compare=compare, marks=marks), width="stretch", theme=None, config={"displayModeBar": False})
+
+        if _donut_slot is not None:
+            with _donut_slot:
+                _wd = waterfall_data(horizon)
+                st.html(ui.donut_html(_wd["steps"], _wd["start"], _wd["end"], "t" if not money else "M$"))
+
+        # ── Row 4: conclusion tile ────────────────────────────
+        st.html(ui.conclusion_tile_html(
+            fc_next=float(fc[0]), lo_next=float(lo[0]), hi_next=float(hi[0]),
+            fc_total=float(fc.sum()), lo_total=float(lo.sum()), hi_total=float(hi.sum()),
+            precision=_precision, sesgo=_sesgo, method_name=main_name,
+            yoy=yoy, horizon=horizon, unit=unit,
+        ))
 
     # ── registrar tiempos de esta visita ────────────────────────────────────────
     _total_ms = round((time.perf_counter() - _t_fn) * 1000, 1)

@@ -194,3 +194,23 @@ span.wrap { white-space:normal; word-break:break-word; }
 @media (max-width:900px) { p.headline{font-size:var(--xl);} div.kpis{grid-template-columns:repeat(2,1fr)!important;} }
 @media (max-width:520px) { div.kpis{grid-template-columns:1fr!important;} div.kpi b{font-size:var(--xl);} }
 @media (prefers-reduced-motion:reduce) { .vk-draw,.flash-up,.flash-down{animation:none!important;} *{transition-duration:.01ms!important;animation-duration:.01ms!important;} }
+
+/* ── 16. Dashboard tiles (Pronóstico overhaul) ───────────  */
+.dash-tile { background:var(--soft); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+.gauge-lbl  { font-size:.6875rem; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); text-align:center; padding:10px 6px 0; }
+.gauge-val  { font-size:1.45rem; font-weight:700; color:var(--fg); text-align:center; line-height:1; margin-top:-2px; }
+.gauge-cap  { font-size:.6875rem; color:var(--muted); text-align:center; padding-bottom:10px; margin-top:3px; }
+.donut-hdr  { font-size:.6875rem; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); padding:10px 12px 6px; }
+.factor-row { display:flex; justify-content:space-between; align-items:center; padding:3px 12px; font-size:.75rem; gap:6px; }
+.factor-row.neg { background:rgba(255,0,0,.07); border-radius:4px; margin:1px 8px; padding:3px 4px; }
+.factor-row.pos { margin:1px 8px; padding:3px 4px; }
+.factor-arrow { font-size:.7rem; flex-shrink:0; }
+.factor-lbl { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--fg); }
+.factor-val { font-weight:600; flex-shrink:0; }
+.factor-val.neg { color:var(--red); }
+.factor-val.pos { color:var(--ok); }
+.concl-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; padding:12px 16px; }
+.concl-lbl  { font-size:.6875rem; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:3px; }
+.concl-val  { font-size:1.75rem; font-weight:700; color:var(--fg); line-height:1.1; }
+.concl-sub  { font-size:.75rem; color:var(--muted); margin-top:3px; line-height:1.4; }
+@media (max-width:700px) { .concl-grid{grid-template-columns:1fr 1fr;} }

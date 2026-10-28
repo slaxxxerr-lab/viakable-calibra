@@ -581,3 +581,217 @@ def importance_fig(names, vals, height=340):
 
 def cal_label(g: str) -> str:
     return f"{g} AWG" if str(g).isdigit() else str(g)
+
+
+# ── Caliber palette (fixed across all chart types) ────────────────────────────
+CAL_COLORS: dict[str, str] = {
+    "6":  "#5b9af5",
+    "10": "#f0b02e",
+    "12": "#30c88a",
+    "14": "#a07af5",
+    "16": "#20c4be",
+    "18": "#f87040",
+}
+
+
+def cal_color(g: str) -> str:
+    key = str(g).split()[0].split("+")[0].strip()
+    return CAL_COLORS.get(key, MUTED)
+
+
+# ── Semi-circle gauge tile ─────────────────────────────────────────────────────
+
+def gauge_tile_html(label: str, val_str: str, pct: float, color: str, cap: str = "") -> Raw:
+    """SVG semi-circle gauge wrapped in a .dash-tile. pct: 0–1 (needle position)."""
+    import math
+    CX, CY, R, SW = 80.0, 74.0, 52.0, 11.0
+
+    def _pt(p):
+        a = math.pi * (1.0 - float(p))
+        return CX + R * math.cos(a), CY - R * math.sin(a)
+
+    p = max(0.0, min(1.0, float(pct)))
+    sx, sy = _pt(0)
+    ex, ey = _pt(1)
+    px, py = _pt(p)
+
+    arc_bg = f"M{sx:.2f},{sy:.2f} A{R},{R} 0 1 1 {ex:.2f},{ey:.2f}"
+    large = 1 if p > 0.5 else 0
+    arc_fill = f"M{sx:.2f},{sy:.2f} A{R},{R} 0 {large} 1 {px:.2f},{py:.2f}" if p > 0.02 else ""
+
+    svg = (
+        f'<svg viewBox="0 0 160 82" width="100%" style="max-width:180px;display:block;margin:0 auto" '
+        f'fill="none" xmlns="http://www.w3.org/2000/svg">'
+        f'<path d="{arc_bg}" stroke="{LINE}" stroke-width="{SW}" stroke-linecap="round"/>'
+        + (f'<path d="{arc_fill}" stroke="{color}" stroke-width="{SW}" stroke-linecap="round"/>' if arc_fill else "")
+        + f'<circle cx="{px:.2f}" cy="{py:.2f}" r="5.5" fill="{color}"/>'
+        f'<circle cx="{px:.2f}" cy="{py:.2f}" r="2.5" fill="{BG}"/>'
+        f'</svg>'
+    )
+    cap_html = f'<div class="gauge-cap">{esc(cap)}</div>' if cap else ""
+    return Raw(
+        f'<div class="dash-tile">'
+        f'<div class="gauge-lbl">{esc(label)}</div>'
+        f'{svg}'
+        f'<div class="gauge-val">{val_str}</div>'
+        f'{cap_html}'
+        f'</div>'
+    )
+
+
+# ── Stacked area chart by caliber ─────────────────────────────────────────────
+
+def stacked_area_fig(detail, hist_dates, fc_dates, lo, hi, unit: str, height: int = 320) -> go.Figure:
+    """Stacked area: one fill layer per caliber, history + forecast separated by a dotted line."""
+    nh, nf = len(hist_dates), len(fc_dates)
+    mk = lambda d: f"{MESES_ES[d.month - 1][:3]} {str(d.year)[2:]}"
+    lh = [mk(d) for d in hist_dates]
+    lf = [mk(d) for d in fc_dates]
+    all_lbl = lh + lf
+
+    traces: list = []
+    for d in detail:
+        g_key = str(d.get("label", "")).split()[0]
+        color = CAL_COLORS.get(g_key, MUTED)
+        y_h = list(np.asarray(d["y"], float)[:nh])
+        y_f = list(np.asarray(d["fc"], float)[:nf])
+        y_all = y_h + y_f
+        n = len(all_lbl)
+        if len(y_all) < n:
+            y_all += [0.0] * (n - len(y_all))
+        name = str(d.get("label", g_key))
+        traces.append(go.Scatter(
+            x=all_lbl, y=y_all[:n],
+            stackgroup="one",
+            fillcolor=_rgba(color, 0.38),
+            line=dict(color=color, width=1.2),
+            name=name, mode="lines",
+            hovertemplate=f"<b>{esc(name)}</b><br>%{{x}}: %{{y:,.0f}} {esc(unit)}<extra></extra>",
+        ))
+
+    fig = go.Figure(traces)
+    if lh:
+        fig.add_vline(x=lh[-1], line=dict(color=MUTED, width=1.5, dash="dot"))
+        fig.add_annotation(x=lh[-1], y=1.0, yref="paper", text=t("Real | Pronóstico"),
+                           showarrow=False, xanchor="left", xshift=6,
+                           font=dict(size=10, color=MUTED))
+    fig.update_layout(**_layout(height, legend=True, margin=dict(l=0, r=8, t=22, b=4)))
+    fig.update_xaxes(type="category", showgrid=False, linecolor=LINE, fixedrange=True,
+                     categoryorder="array", categoryarray=all_lbl)
+    fig.update_yaxes(gridcolor=_rgba(MUTED, .15), zeroline=False, fixedrange=True,
+                     rangemode="tozero", ticksuffix=f" {unit}")
+    return fig
+
+
+# ── Donut: what drives the forecast ───────────────────────────────────────────
+
+def donut_html(steps, base_sum: float, final_sum: float, unit: str = "t") -> Raw:
+    """Donut of forecast drivers. Positive contributions → colored arcs.
+    Negative factors are listed with a red background stripe so they cannot be missed."""
+    import math
+    GREEN = "#22c55e"
+    seg_colors = [MUTED, RED, GREEN, "#f59e0b", "#a07af5", "#f87040", BLUE]
+
+    pos_steps = [(lbl, d) for lbl, d, _ in steps if d > 0]
+    all_pos = float(base_sum) + sum(d for _, d in pos_steps)
+    if all_pos < 1:
+        all_pos = max(float(final_sum), 1.0)
+    segs = [("Base", float(base_sum))] + pos_steps
+
+    CX, CY, R_O, R_I = 80, 80, 65, 36
+    GAP = 0.05
+    start = -math.pi / 2
+    arcs: list[str] = []
+    for i, (_, val) in enumerate(segs):
+        if val <= 0:
+            continue
+        frac = val / all_pos
+        span = max(0.0, frac * (2 * math.pi - len(segs) * GAP))
+        if span < 0.03:
+            continue
+        end = start + span
+        large = 1 if span > math.pi else 0
+        x1 = CX + R_O * math.cos(start); y1 = CY + R_O * math.sin(start)
+        x2 = CX + R_O * math.cos(end);   y2 = CY + R_O * math.sin(end)
+        xi1= CX + R_I * math.cos(end);   yi1= CY + R_I * math.sin(end)
+        xi2= CX + R_I * math.cos(start); yi2= CY + R_I * math.sin(start)
+        c = seg_colors[i % len(seg_colors)]
+        arcs.append(
+            f'<path d="M{x1:.2f},{y1:.2f} A{R_O},{R_O} 0 {large} 1 {x2:.2f},{y2:.2f} '
+            f'L{xi1:.2f},{yi1:.2f} A{R_I},{R_I} 0 {large} 0 {xi2:.2f},{yi2:.2f} Z" '
+            f'fill="{c}" opacity="0.88"/>'
+        )
+        start = end + GAP
+
+    svg = (
+        f'<svg viewBox="0 0 160 160" width="130" height="130" fill="none" '
+        f'xmlns="http://www.w3.org/2000/svg">'
+        + "".join(arcs)
+        + f'<text x="{CX}" y="{CY - 5}" text-anchor="middle" '
+        f'font-size="14" font-weight="700" fill="{FG}">{final_sum:,.0f}</text>'
+        + f'<text x="{CX}" y="{CY + 12}" text-anchor="middle" '
+        f'font-size="9" fill="{MUTED}">{esc(unit)}</text>'
+        + f'</svg>'
+    )
+
+    rows: list[str] = []
+    for lbl, delta, _ in steps:
+        neg = delta < 0
+        arrow = "▼" if neg else "▲"
+        cls_row = "factor-row neg" if neg else "factor-row pos"
+        cls_arr = "factor-arrow neg" if neg else "factor-arrow pos"
+        cls_val = "factor-val neg" if neg else "factor-val pos"
+        rows.append(
+            f'<div class="{cls_row}">'
+            f'<span class="{cls_arr}">{arrow}</span>'
+            f'<span class="factor-lbl">{esc(lbl)}</span>'
+            f'<span class="{cls_val}">{delta:+,.1f}</span>'
+            f'</div>'
+        )
+
+    return Raw(
+        f'<div class="dash-tile" style="height:100%">'
+        f'<div class="donut-hdr">{esc(t("Qué mueve el pronóstico"))}</div>'
+        f'<div style="display:flex;align-items:center;gap:6px;padding:2px 6px 4px">'
+        f'<div style="flex-shrink:0">{svg}</div>'
+        f'<div style="flex:1;min-width:0">' + "".join(rows) + f'</div>'
+        f'</div>'
+        f'</div>'
+    )
+
+
+# ── Conclusion tile ───────────────────────────────────────────────────────────
+
+def conclusion_tile_html(
+    fc_next: float, lo_next: float, hi_next: float,
+    fc_total: float, lo_total: float, hi_total: float,
+    precision: float, sesgo: float,
+    method_name: str, yoy, horizon: int, unit: str,
+) -> Raw:
+    """Summary tile: next month + total + YoY with precision and bias."""
+    GREEN = "#22c55e"
+    prec_col = GREEN if precision >= 85 else ("#f59e0b" if precision >= 70 else RED)
+    ses_col  = GREEN if abs(sesgo) < 10 else ("#f59e0b" if abs(sesgo) < 20 else RED)
+    yoy_v = float(yoy) if yoy is not None and np.isfinite(float(yoy)) else None
+    yoy_str  = (("▲ " if yoy_v >= 0 else "▼ ") + f"{abs(yoy_v):.1f}%") if yoy_v is not None else "—"
+    yoy_col  = (GREEN if yoy_v >= 0 else RED) if yoy_v is not None else MUTED
+
+    return Raw(
+        f'<div class="dash-tile">'
+        f'<div class="concl-grid">'
+        f'<div><div class="concl-lbl">{esc(t("Próximo mes"))}</div>'
+        f'<div class="concl-val">{fc_next:,.0f}</div>'
+        f'<div class="concl-sub">{esc(unit)} · {lo_next:,.0f}–{hi_next:,.0f}</div></div>'
+        f'<div><div class="concl-lbl">{esc(t("Total {h} meses", h=horizon))}</div>'
+        f'<div class="concl-val">{fc_total:,.0f}</div>'
+        f'<div class="concl-sub">{esc(unit)} · {lo_total:,.0f}–{hi_total:,.0f}</div></div>'
+        f'<div><div class="concl-lbl">{esc(t("Cambio vs año anterior"))}</div>'
+        f'<div class="concl-val" style="color:{yoy_col}">{yoy_str}</div>'
+        f'<div class="concl-sub">'
+        f'{esc(t("Precisión"))}: <b style="color:{prec_col}">{precision:.1f}%</b> · '
+        f'{esc(t("Sesgo"))}: <b style="color:{ses_col}">{sesgo:+.1f}%</b><br>'
+        f'{esc(t("Método"))}: {esc(t(method_name))}'
+        f'</div></div>'
+        f'</div>'
+        f'</div>'
+    )
