@@ -5,6 +5,7 @@ import datetime as dt
 import hashlib
 import io
 import json
+import logging
 import re
 import threading
 import time
@@ -87,6 +88,24 @@ def note_t(n: str) -> str:
         if mt:
             return en.format(*mt.groups())
     return n
+
+
+# ================================================================== rendimiento
+_LOG_DIR = Path(__file__).parent / "logs"
+try:
+    _LOG_DIR.mkdir(exist_ok=True)
+except Exception:
+    pass
+_perf_logger = logging.getLogger("calibra.perf")
+if not _perf_logger.handlers:
+    try:
+        _fh = logging.FileHandler(_LOG_DIR / "calibra.log", encoding="utf-8")
+        _fh.setFormatter(logging.Formatter("%(asctime)s %(message)s", datefmt="%Y-%m-%dT%H:%M:%S"))
+        _perf_logger.addHandler(_fh)
+    except Exception:
+        _perf_logger.addHandler(logging.NullHandler())
+    _perf_logger.setLevel(logging.INFO)
+    _perf_logger.propagate = False
 
 
 # ================================================================== estado persistente
@@ -1471,9 +1490,23 @@ def forecast_excel(pr, lo, hi, methods_df, unit, horizon) -> bytes:
 
 
 def section_pronostico():
+    _run_n = len(st.session_state.get("_perf_history", [])) + 1
+    _t_fn = time.perf_counter()
+    _t0 = _t_fn
+    _steps: list[dict] = []
+
+    def _lap(label: str) -> None:
+        nonlocal _t0
+        ms = round((time.perf_counter() - _t0) * 1000, 1)
+        _steps.append({"label": label, "ms": ms})
+        _perf_logger.info("  %-42s %8.1f ms  [run %d]", label, ms, _run_n)
+        _t0 = time.perf_counter()
+
     prep = default_prep()
+    _lap("default_prep (carga + limpieza de datos)")
     m = prep.monthly
     ml = get_ml(m, E.windows_for(m))
+    _lap("get_ml (ajuste ML + SHAP)")
     prices, mult, sig, w = get_prices(), get_mult(), get_sig(), get_w()
     A = adv()
     u = ui.UNIT
@@ -1485,6 +1518,7 @@ def section_pronostico():
         allg = tuple(g for x in units for g in x)
         m_view = m if color_filter is None else m[m["color"].isin(color_filter)]
         bt = cached_bt(m_view, allg, market, measure, prices, ml)
+        _lap("cached_bt (selección de método / backtest)")
         method, mode = E.AUTO, "sum"
         best_name = E.best_method(bt) if len(bt) else E.AUTO
         if A:
@@ -1509,6 +1543,7 @@ def section_pronostico():
         export_slot = st.container()
 
     pr = cached_project(m_view, tuple(tuple(x) for x in units), market, horizon, method, measure, mode, mult, sig, w, prices, ml, get_crm(None, measure, prices), apply_signals_on())
+    _lap("cached_project (pronóstico principal)")
     money = measure == E.MXN
     unit = "MXN" if money else u
     fv = (lambda v: ui.mxn(v)) if money else (lambda v: f"{v:,.0f} {u}")
@@ -1517,6 +1552,7 @@ def section_pronostico():
     prev = float(pr.table["Mismos meses año anterior"].sum())
     yoy = (fc.sum() / prev - 1) * 100 if prev > 0 else None
     auto = pr if method == E.AUTO else cached_project(m_view, tuple(tuple(x) for x in units), market, horizon, E.AUTO, measure, mode, mult, sig, w, prices, ml, get_crm(None, measure, prices), apply_signals_on())
+    _lap("cached_project AUTO (comparación automática)")
     sum_mode = mode == "sum" and len(units) > 1
     main_name = t(MODE_LBL["sum"]) if sum_mode else t(pr.method)
     cls = M.demand_class(hist.values)[0]
@@ -1583,7 +1619,9 @@ def section_pronostico():
         methods_df = pd.DataFrame()
         if A:
             methods_df = compare_table(m_view, allg, market, horizon, measure, prices, ml, pr, bt, w, sig, mult, mode, units, method, fv, unit)
+            _lap("compare_table (tabla de métodos)")
             ml_block(ml, m, units, market, measure, prices)
+            _lap("ml_block + lowvol + tracking")
             lowvol_block(m, allg)
             tracking_block(m, ml, allg)
 
@@ -1600,6 +1638,29 @@ def section_pronostico():
         with fig_slot:
             st.plotly_chart(ui.forecast_fig(list(hist.index), hist.values, list(pr.index), fc, lo, hi, unit, main_name, cons, money=money,
                                             trend=show_trend, compare=compare, marks=marks), width="stretch", theme=None, config={"displayModeBar": False})
+
+    # ── registrar tiempos de esta visita ────────────────────────────────────────
+    _total_ms = round((time.perf_counter() - _t_fn) * 1000, 1)
+    _lap(f"total section_pronostico")
+    _hist = st.session_state.setdefault("_perf_history", [])
+    _hist.append({"run": _run_n, "steps": list(_steps), "total_ms": _total_ms})
+    if len(_hist) > 5:
+        _hist.pop(0)
+    _perf_logger.info("  %-42s %8.1f ms  [run %d TOTAL]", "section_pronostico", _total_ms, _run_n)
+
+    if adv():
+        with st.expander(t("Diagnóstico de rendimiento"), expanded=False):
+            st.caption(t("Tiempo de cada paso en la última visita. Un valor alto indica dónde está el cuello de botella."))
+            _rows = [[s["label"], f'{s["ms"]:.0f} ms'] for s in _steps]
+            _rows.append([t("**Total**"), f'**{_total_ms:.0f} ms**'])
+            st.html(ui.table([t("Paso"), t("Tiempo")], [[ui.Raw(f"<code>{r[0]}</code>"), ui.Raw(r[1])] for r in _rows]))
+            if len(_hist) >= 2:
+                st.caption(t("Últimas {n} visitas:", n=len(_hist)))
+                _visit_rows = [[f'#{h["run"]}', f'{h["total_ms"]:.0f} ms',
+                                ", ".join(f'{s["label"]} {s["ms"]:.0f}ms' for s in h["steps"] if s["ms"] > 100)]
+                               for h in _hist]
+                st.html(ui.table([t("Visita"), t("Total"), t("Pasos lentos (>100 ms)")],
+                                 [[ui.Raw(r[0]), ui.Raw(r[1]), ui.Raw(f'<span class="hint">{ui.esc(r[2]) or "—"}</span>')] for r in _visit_rows]))
 
     with export_slot:
         if not methods_df.empty:
@@ -5428,10 +5489,12 @@ ADV_ONLY = {"Señales", "Laboratorio", "Equipo", "Riesgo"}
 
 def main():
     sync_store()
+    _t_live = time.perf_counter()
     try:
         apply_live()
     except Exception:                       # un fallo de red o de la base nunca debe romper la app
         pass
+    _perf_logger.info("%-40s %8.1f ms  [main]", "apply_live (precios en vivo)", (time.perf_counter() - _t_live) * 1000)
     cfg = ST.cfg()
     set_lang(cfg["lang"])
     try:
