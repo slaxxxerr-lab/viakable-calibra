@@ -5334,7 +5334,13 @@ def risk_bands_block(ctx, n: int):
         fc += f
     b = RK.bands(draws)
     m = ctx["m"]
-    hist = E.series(m, [sel] if sel != "Todos" else None)
+    _mf = m if sel == "Todos" else m[m["cal"] == sel]
+    _agg = _mf.groupby("ym")["qty"].sum().sort_index()
+    if not _agg.empty:
+        _hi = pd.date_range(_agg.index.min(), _agg.index.max(), freq="MS")
+        hist = _agg.reindex(_hi, fill_value=0.0)
+    else:
+        hist = _agg
     idx = pd.date_range(m["ym"].max() + pd.offsets.MonthBegin(1), periods=setup.H, freq="MS")
     st.plotly_chart(ui.forecast_fig(list(hist.index), hist.values, list(idx), b["p50"], b["p10"], b["p90"], ui.UNIT, "P50", height=330, compare=[(t("Pronóstico"), fc)]),
                     key="rk_bands_fc", width="stretch", theme=None, config={"displayModeBar": False})
