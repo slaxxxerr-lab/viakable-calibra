@@ -18,9 +18,25 @@ from viakable_forecast.config import MESES_ES
 
 MESES_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 GRAY, BLUE = "#cbcbcb", "#48b3f6"
-PAL_L = {"bg": "#ffffff", "fg": "#000000", "muted": "#5c5c5c", "line": "#cbcbcb", "soft": "#f4f4f4", "inverse-bg": "#000000", "inverse-fg": "#ffffff"}
-PAL_D = {"bg": "#000000", "fg": "#ffffff", "muted": "#a8a8a8", "line": "#3a3a3a", "soft": "#151515", "inverse-bg": "#ffffff", "inverse-fg": "#000000"}
-FONTS = {"brand": '"Aeonik","Aptos","Manrope",system-ui,-apple-system,"Segoe UI",sans-serif',
+PAL_L = {
+    "bg": "#F3F3F3", "fg": "#0A0A0A", "muted": "#5C5C5C", "line": "#ECECEC",
+    "soft": "#FFFFFF", "inverse-bg": "#0A0A0A", "inverse-fg": "#FFFFFF",
+    "surface-2": "#F7F7F7", "text-3": "#9A9A9A",
+    "accent-soft": "#FFE8E8", "black-btn": "#0A0A0A",
+    "tile-border-color": "transparent",
+    "shadow-tile": "0 12px 32px rgba(0,0,0,.06),0 2px 6px rgba(0,0,0,.04)",
+    "shadow-sm": "0 2px 8px rgba(0,0,0,.07),0 1px 3px rgba(0,0,0,.04)",
+}
+PAL_D = {
+    "bg": "#0B0B0C", "fg": "#F5F5F5", "muted": "#B4B4B4", "line": "#26262A",
+    "soft": "#161618", "inverse-bg": "#F5F5F5", "inverse-fg": "#0B0B0C",
+    "surface-2": "#1E1E21", "text-3": "#7A7A7A",
+    "accent-soft": "rgba(255,42,42,.14)", "black-btn": "#F5F5F5",
+    "tile-border-color": "rgba(255,255,255,.06)",
+    "shadow-tile": "0 2px 12px rgba(0,0,0,.35)",
+    "shadow-sm": "0 1px 4px rgba(0,0,0,.3)",
+}
+FONTS = {"brand": '"Inter Tight","Aeonik","Aptos","Manrope",system-ui,-apple-system,"Segoe UI",sans-serif',
          "manrope": '"Manrope",system-ui,sans-serif', "plex": '"IBM Plex Sans",system-ui,sans-serif',
          "system": 'system-ui,-apple-system,"Segoe UI",Roboto,sans-serif'}
 # Valores vigentes (los fija configure() en cada ejecución; las gráficas los leen al dibujarse)
@@ -64,7 +80,7 @@ ENGINE_JS = """<script>
   if (window.__vkEngine) return; window.__vkEngine = true;
   var RM = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : {matches:false};
   try { document.cookie = 'vk_rm=' + (RM.matches ? 1 : 0) + ';path=/;max-age=31536000;SameSite=Lax'; } catch(e) {}
-  try { var _pd=window.parent?window.parent.document:document; var _bg=getComputedStyle(_pd.documentElement).getPropertyValue('--bg').trim(); var _isDark=_bg==='#000000'||_bg==='rgb(0,0,0)'; document.cookie='vk_dark='+(_isDark?1:0)+';path=/;max-age=31536000;SameSite=Lax'; } catch(e) {}
+  try { var _pd=window.parent?window.parent.document:document; var _bg=getComputedStyle(_pd.documentElement).getPropertyValue('--bg').trim(); function _lum(c){var m=c.match(/rgb\\((\\d+),\\s*(\\d+),\\s*(\\d+)\\)/);return m?(0.299*(+m[1])+0.587*(+m[2])+0.114*(+m[3]))/255:(_bg.startsWith('#')?parseInt(_bg.slice(1,3)||'ff',16)/255:1);} var _isDark=_lum(_bg)<0.15; document.cookie='vk_dark='+(_isDark?1:0)+';path=/;max-age=31536000;SameSite=Lax'; } catch(e) {}
   var last = {}, lastPx = {};
   function on(){ var c = document.getElementById('vk-cfg'); return !RM.matches && !(c && c.dataset.anim === 'off'); }
   function fmt(v, d){ return v.toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d}); }
@@ -141,7 +157,7 @@ def engine_html(anim_on: bool) -> str:
         "(function(){"
         "var pd=window.parent?window.parent.document:document;"
         "var fonts=["
-        "'https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap',"
+        "'https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700;800&display=swap',"
         "'https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap'"
         "];"
         "fonts.forEach(function(href){"
@@ -237,6 +253,42 @@ def header_html() -> str:
 
 def connector_html() -> str:
     return '<div class="connector" aria-hidden="true"><span></span><span></span></div>'
+
+
+def logo_pill_html() -> Raw:
+    """Logo lockup: rounded square "C." + "calibra" in a pill."""
+    return Raw(
+        '<div class="vk-logo-pill">'
+        '<div class="vk-logo-square">C<span class="dot">.</span></div>'
+        '<span class="vk-logo-name">calibra</span>'
+        '</div>'
+    )
+
+
+def footer_html(plan_ready: bool = True, run_date: str = "", data_month: str = "") -> Raw:
+    """Bottom status bar: disclaimer · floating status pill · branding."""
+    dot_cls = "vk-status-dot" if plan_ready else "vk-status-dot pending"
+    label = esc(t("Plan listo")) if plan_ready else esc(t("Calculando…"))
+    meta_parts = []
+    if run_date:
+        meta_parts.append(esc(t("Modelos {d}", d=run_date)))
+    if data_month:
+        meta_parts.append(esc(t("datos a {m}", m=data_month)))
+    meta = " · ".join(meta_parts) if meta_parts else ""
+    meta_html = f'<span class="vk-status-meta"> · {meta}</span>' if meta else ""
+    return Raw(
+        '<div class="vk-footer">'
+        '<span class="vk-footer-mono">'
+        + esc(t("Prototipo académico · Precios ilustrativos · No conecta con SAP")) +
+        '</span>'
+        '<div class="vk-status-pill">'
+        f'<span class="{dot_cls}"></span>'
+        f'<span class="vk-status-label">{label}</span>'
+        f'{meta_html}'
+        '</div>'
+        '<span class="vk-footer-mono">Viakable · ITESM GPO 401 · 2026</span>'
+        '</div>'
+    )
 
 
 def headline(text: str, sub: str = "") -> str:

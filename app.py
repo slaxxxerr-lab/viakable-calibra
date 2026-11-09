@@ -5600,33 +5600,172 @@ def main():
             st.html(esc(t(FOOTER)))
         return
 
-    nav_opts = [s for s in SECTIONS if s not in ADV_ONLY or adv()]
-    if st.session_state.get("nav") not in nav_opts + [None]:
-        st.session_state["nav"] = nav_opts[0]
-    if "seg_ui_mode" not in st.session_state:
-        st.session_state["seg_ui_mode"] = cfg["mode"]
+    # ── Tab mapping (old section keys → new 4-tab structure) ────────
+    _NAV_MAIN = ["Hoy", "Pronóstico", "Compras de metal", "Clientes"]
+    _NAV_SECONDARY = ["Datos", "Noticias", "Señales", "Laboratorio", "Equipo"]
+    _OLD_TO_TAB = {
+        "Inicio": "Hoy", "Pronóstico": "Pronóstico",
+        "Planeación": "Compras de metal", "Metales": "Compras de metal",
+        "Riesgo": "Compras de metal", "Clientes": "Clientes",
+        "Oportunidades": "Clientes", "Portafolio": "Pronóstico",
+        "Asistente": "Clientes",
+        "Señales": "Señales", "Noticias": "Noticias",
+        "Laboratorio": "Laboratorio", "Datos": "Datos", "Equipo": "Equipo",
+    }
+    # Migrate tour navigation from old "nav" key
+    _old_nav = st.session_state.pop("nav", None)
+    if _old_nav and _old_nav in _OLD_TO_TAB:
+        mapped = _OLD_TO_TAB[_old_nav]
+        if mapped in _NAV_MAIN:
+            store()["nav_tab"] = mapped
+            st.session_state["nav_tab"] = mapped
+            store()["nav_v2"] = mapped
+        else:
+            store()["nav_v2"] = mapped
+
+    # Initialise nav state
+    if "nav_tab" not in st.session_state:
+        st.session_state["nav_tab"] = store().get("nav_tab", "Hoy")
+    if "nav_v2" not in store():
+        store()["nav_v2"] = st.session_state["nav_tab"]
+
+    # ── Header ────────────────────────────────────────────────────────
     with st.container(key="top"):
-        c = st.columns([3.4, 1.5, 0.95, 1.05, 1.3], vertical_alignment="center")
-        c[0].html(ui.header_html())
-        c[1].radio(t("Modo"), ["simple", "adv"], key="seg_ui_mode", horizontal=True, label_visibility="collapsed",
-                   format_func=lambda v: t("Simple") if v == "simple" else t("Avanzado"), on_change=lambda: ST.put("mode", st.session_state["seg_ui_mode"]))
-        c[2].button(t("Guía rápida"), key="btn_tour", on_click=tour_start)
-        c[3].button(t("Presentar"), key="btn_present", on_click=pres_start)
-        _lang_label = "Translate to English" if cfg["lang"] == "es" else "Traducir a Español"
-        c[4].button(_lang_label, key="btn_lang", on_click=toggle_lang)
-        choice = wid(st.radio, t("Sección"), "nav", nav_opts[0], options=nav_opts, horizontal=True, label_visibility="collapsed", format_func=t)
+        _hcols = st.columns([2, 6, 1, 4], vertical_alignment="center", gap="small")
+        # Logo
+        _hcols[0].html(ui.logo_pill_html())
+        # 4-tab nav
+        with _hcols[1]:
+            _tab_labels = {
+                "Hoy": t("Hoy"), "Pronóstico": t("Pronóstico"),
+                "Compras de metal": t("Compras de metal"), "Clientes": t("Clientes"),
+            }
+            _prev_tab = store().get("nav_tab", "Hoy")
+            _chosen_tab = st.segmented_control(
+                t("Nav"), _NAV_MAIN,
+                default=store().get("nav_tab", "Hoy"),
+                key="nav_tab",
+                label_visibility="collapsed",
+                format_func=lambda x: _tab_labels.get(x, x),
+            )
+            # When tab changes, clear secondary and update nav_v2
+            if _chosen_tab and _chosen_tab != _prev_tab:
+                store()["nav_tab"] = _chosen_tab
+                store()["nav_v2"] = _chosen_tab
+        # Theme toggle (gap column)
+        with _hcols[2]:
+            _theme_icon = "🌙" if not dark else "☀️"
+            if st.button(_theme_icon, key="btn_theme", help=t("Cambiar tema")):
+                _next_theme = "dark" if cfg["theme"] != "dark" else "light"
+                ST.put("theme", _next_theme)
+                st.rerun()
+        # Right: assistant bar + ⋯ menu
+        with _hcols[3]:
+            _rc1, _rc2 = st.columns([7, 1], gap="small", vertical_alignment="center")
+            with _rc1:
+                _ass_placeholder = {
+                    "Hoy": t("¿Qué debo atender hoy?"),
+                    "Pronóstico": t("¿Por qué cambió el pronóstico?"),
+                    "Compras de metal": t("¿Qué pasa si el cobre sube 10%?"),
+                    "Clientes": t("¿Qué clientes compran menos?"),
+                }.get(store().get("nav_v2", "Hoy"), t("Pregúntale a Calibra…"))
+                _hdr_q = st.text_input(
+                    t("Asistente"), placeholder=_ass_placeholder,
+                    key="hdr_query", label_visibility="collapsed",
+                )
+                if _hdr_q and _hdr_q != store().get("_hdr_q_prev"):
+                    store()["_hdr_q_prev"] = _hdr_q
+                    store()["nav_v2"] = "Asistente"
+                    store()["ask_q"] = _hdr_q
+                    if "hdr_query" in st.session_state:
+                        del st.session_state["hdr_query"]
+                    st.rerun()
+            with _rc2:
+                with st.popover("⋯", use_container_width=False):
+                    for _sec in _NAV_SECONDARY:
+                        if _sec in ADV_ONLY and not adv():
+                            continue
+                        if st.button(t(_sec), key=f"nav_sec_{_sec}", use_container_width=True):
+                            store()["nav_v2"] = _sec
+                            st.rerun()
+                    st.markdown("---")
+                    # Mode toggle
+                    if "seg_ui_mode" not in st.session_state:
+                        st.session_state["seg_ui_mode"] = cfg["mode"]
+                    st.radio(t("Modo"), ["simple", "adv"], key="seg_ui_mode", horizontal=True,
+                             label_visibility="visible",
+                             format_func=lambda v: t("Simple") if v == "simple" else t("Avanzado"),
+                             on_change=lambda: ST.put("mode", st.session_state["seg_ui_mode"]))
+                    # Language
+                    _lang_label = "English" if cfg["lang"] == "es" else "Español"
+                    st.button(_lang_label, key="btn_lang", on_click=toggle_lang, use_container_width=True)
+                    # Presentation / tour
+                    st.button(t("Presentar"), key="btn_present", on_click=pres_start, use_container_width=True)
+                    st.button(t("Guía rápida"), key="btn_tour", on_click=tour_start, use_container_width=True)
+                    st.markdown("---")
+                    st.button(t("Restablecer ajustes"), key="reset_btn", on_click=do_reset, use_container_width=True)
+
     st.html(ui.connector_html())
     st.html(ui.engine_html(ui.ANIM), unsafe_allow_javascript=True)
     fresh_slot = st.empty()
     ticker()
     st.session_state.setdefault("_news_seen", NEWS.meta_get("last_fetch"))
     news_timer()
-    SECTIONS[choice]()
+
+    # ── Route to page ─────────────────────────────────────────────────
+    _page = store().get("nav_v2", "Hoy")
+    if _page == "Hoy":
+        section_inicio()
+    elif _page == "Pronóstico":
+        section_pronostico()
+        if adv():
+            section_portafolio()
+    elif _page == "Compras de metal":
+        section_metales()
+        section_planeacion()
+        if adv():
+            section_riesgo()
+    elif _page == "Clientes":
+        section_clientes()
+        section_oportunidades()
+    elif _page == "Datos":
+        section_datos()
+    elif _page == "Noticias":
+        section_noticias()
+    elif _page == "Señales":
+        if adv():
+            section_senales()
+        else:
+            st.info(t("Las señales están disponibles en modo Avanzado."))
+    elif _page == "Laboratorio":
+        if adv():
+            section_laboratorio()
+        else:
+            st.info(t("El laboratorio está disponible en modo Avanzado."))
+    elif _page == "Equipo":
+        if adv():
+            section_equipo()
+        else:
+            st.info(t("El equipo está disponible en modo Avanzado."))
+    elif _page == "Asistente":
+        section_asistente()
+    else:
+        section_inicio()
+
     fresh_slot.html(freshness_html())
+
+    # ── Footer ────────────────────────────────────────────────────────
     with st.container(key="footer"):
-        f1, f2 = st.columns([4, 1.4], vertical_alignment="center")
-        f1.html(esc(t(FOOTER)))
-        f2.button(t("Restablecer ajustes y ventas"), key="reset_btn", on_click=do_reset)
+        _run_d = ""
+        _data_m = ""
+        try:
+            _prep = base_prep()
+            if hasattr(_prep, "monthly") and not _prep.monthly.empty:
+                _data_m = ui.mes(_prep.monthly["ym"].max(), largo=True)
+        except Exception:
+            pass
+        st.html(ui.footer_html(plan_ready=True, run_date=_run_d, data_month=_data_m))
+
     if st.session_state.get("drawer"):
         drawer()
     tour_card()

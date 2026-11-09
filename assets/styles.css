@@ -214,3 +214,305 @@ span.wrap { white-space:normal; word-break:break-word; }
 .concl-val  { font-size:1.75rem; font-weight:700; color:var(--fg); line-height:1.1; }
 .concl-sub  { font-size:.75rem; color:var(--muted); margin-top:3px; line-height:1.4; }
 @media (max-width:700px) { .concl-grid{grid-template-columns:1fr 1fr;} }
+
+/* ════════════════════════════════════════════════════════════════
+   §17 · New design system — shell, tiles, nav, buttons, footer
+   All new tokens come from PAL_L/PAL_D via ui.py css().
+   ════════════════════════════════════════════════════════════════ */
+
+/* Hide all native Streamlit chrome */
+[data-testid="stHeader"],
+[data-testid="stDecoration"],
+[data-testid="stStatusWidget"],
+[data-testid="stToolbar"],
+[data-testid="stMainMenu"],
+[data-testid="collapsedControl"] { display:none!important; }
+
+/* Page and content area */
+.stApp,[data-testid="stAppViewContainer"],
+[data-testid="stMain"],section.main { background:var(--bg)!important; }
+[data-testid="block-container"] {
+  padding-top:4px!important; padding-bottom:56px!important;
+  max-width:1440px!important;
+}
+
+/* Tiles — floating white cards */
+.vk-tile {
+  background:var(--soft);
+  border-radius:24px;
+  padding:24px;
+  box-shadow:var(--shadow-tile);
+  border:1px solid var(--tile-border-color);
+  margin-bottom:16px;
+}
+.vk-tile-sm {
+  background:var(--soft);
+  border-radius:18px;
+  padding:16px;
+  box-shadow:var(--shadow-sm);
+  border:1px solid var(--tile-border-color);
+}
+
+/* Eyebrow / tile title — JetBrains Mono uppercase */
+.vk-eyebrow,.vk-tile-title {
+  font-family:"JetBrains Mono","Courier New",monospace;
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:4px;
+  line-height:1.4;
+}
+
+/* Typography scale */
+.vk-hero {
+  font-size:clamp(72px,9vw,130px);
+  font-weight:800;
+  color:var(--fg);
+  letter-spacing:-.04em;
+  line-height:1;
+  font-variant-numeric:tabular-nums;
+}
+.vk-headline {
+  font-size:clamp(28px,3vw,40px);
+  font-weight:800;
+  color:var(--fg);
+  letter-spacing:-.03em;
+  line-height:1.1;
+  margin:0 0 8px;
+}
+.vk-headline .accent,.vk-hero .accent { color:var(--accent); }
+.vk-kpi-num {
+  font-size:32px;
+  font-weight:800;
+  color:var(--fg);
+  letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums;
+  line-height:1;
+}
+.vk-kpi-num.accent { color:var(--accent); }
+.vk-kpi-label {
+  font-family:"JetBrains Mono","Courier New",monospace;
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:6px;
+}
+.vk-kpi-caption { font-size:12px; color:var(--muted); margin-top:4px; line-height:1.4; }
+
+/* Update existing KPI tiles */
+div.kpi {
+  background:var(--soft)!important;
+  border:1px solid var(--tile-border-color)!important;
+  box-shadow:var(--shadow-sm)!important;
+  border-radius:18px!important;
+}
+.dash-tile {
+  background:var(--soft)!important;
+  border:1px solid var(--tile-border-color)!important;
+  box-shadow:var(--shadow-sm)!important;
+}
+
+/* ── §18 · Nav — st.segmented_control as pill track ──────── */
+/* Target only the segmented control inside our header container */
+[data-testid="stMain"] [data-testid="stSegmentedControl"] > div {
+  background:var(--surface-2)!important;
+  border-radius:999px!important;
+  border:1px solid var(--line)!important;
+  padding:3px!important;
+  gap:2px!important;
+  display:flex!important;
+}
+[data-testid="stMain"] [data-testid="stSegmentedControl"] > div > label {
+  display:none!important;
+}
+[data-testid="stMain"] [data-testid="stSegmentedControl"] button {
+  border-radius:999px!important;
+  border:none!important;
+  font-weight:600!important;
+  font-size:14px!important;
+  padding:7px 20px!important;
+  letter-spacing:-.01em!important;
+  color:var(--muted)!important;
+  background:transparent!important;
+  transition:all var(--dur) var(--ease)!important;
+  white-space:nowrap!important;
+}
+[data-testid="stMain"] [data-testid="stSegmentedControl"] button[aria-selected="true"] {
+  background:var(--fg)!important;
+  color:var(--bg)!important;
+  box-shadow:var(--shadow-sm)!important;
+}
+/* Segmented control label */
+[data-testid="stSegmentedControl"] > label { display:none!important; }
+
+/* ── §19 · Logo pill ─────────────────────────────────────── */
+.vk-logo-pill {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  background:var(--soft);
+  border-radius:999px;
+  padding:6px 14px 6px 8px;
+  box-shadow:var(--shadow-sm);
+  border:1px solid var(--tile-border-color);
+  text-decoration:none;
+  user-select:none;
+}
+.vk-logo-square {
+  width:30px; height:30px;
+  background:var(--fg);
+  border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+  font-size:14px; font-weight:800; color:var(--bg);
+  letter-spacing:-.02em;
+}
+.vk-logo-square .dot { color:var(--accent); }
+.vk-logo-name {
+  font-size:15px; font-weight:700;
+  color:var(--fg); letter-spacing:-.02em;
+  line-height:1;
+}
+
+/* ── §20 · Icon buttons (theme toggle, ⋯ menu) ───────────── */
+.vk-icon-btn button,[data-testid="stPopover"] > div > button {
+  background:var(--soft)!important;
+  border-radius:999px!important;
+  border:1px solid var(--line)!important;
+  min-width:36px!important; height:36px!important;
+  padding:0 10px!important;
+  font-size:15px!important;
+  box-shadow:var(--shadow-sm)!important;
+  color:var(--fg)!important;
+  font-weight:600!important;
+}
+
+/* Primary black pill button */
+[data-testid="baseButton-primary"] {
+  background:var(--fg)!important;
+  color:var(--bg)!important;
+  border-radius:999px!important;
+  border:none!important;
+  font-weight:600!important;
+  box-shadow:var(--shadow-sm)!important;
+}
+/* Secondary white pill */
+[data-testid="baseButton-secondary"] {
+  background:var(--soft)!important;
+  color:var(--fg)!important;
+  border-radius:999px!important;
+  border:1px solid var(--line)!important;
+  font-weight:600!important;
+  box-shadow:var(--shadow-sm)!important;
+}
+
+/* ── §21 · Assistant bar ─────────────────────────────────── */
+.vk-assistant-wrap [data-testid="stTextInput"] > div {
+  border-radius:999px!important;
+  border:1px solid var(--line)!important;
+  background:var(--soft)!important;
+  box-shadow:var(--shadow-sm)!important;
+  padding:0 8px!important;
+  overflow:hidden!important;
+}
+.vk-assistant-wrap [data-testid="stTextInput"] input {
+  font-size:13px!important;
+  color:var(--fg)!important;
+  background:transparent!important;
+}
+
+/* ── §22 · Footer ────────────────────────────────────────── */
+.vk-footer {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:16px 0 8px;
+  border-top:1px solid var(--line);
+  margin-top:40px;
+  gap:16px;
+  flex-wrap:wrap;
+}
+.vk-footer-mono {
+  font-family:"JetBrains Mono","Courier New",monospace;
+  font-size:10px;
+  font-weight:500;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--muted);
+  opacity:.7;
+}
+.vk-status-pill {
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  background:var(--soft);
+  border-radius:999px;
+  padding:5px 14px;
+  box-shadow:var(--shadow-sm);
+  border:1px solid var(--tile-border-color);
+  font-size:12px;
+  white-space:nowrap;
+}
+.vk-status-dot {
+  width:6px; height:6px;
+  border-radius:50%;
+  background:var(--ok);
+  flex-shrink:0;
+}
+.vk-status-dot.pending { background:var(--warn); }
+.vk-status-label { font-weight:700; color:var(--fg); }
+.vk-status-meta {
+  font-family:"JetBrains Mono","Courier New",monospace;
+  font-size:10px;
+  letter-spacing:.06em;
+  color:var(--muted);
+}
+
+/* ── §23 · Popover secondary nav ────────────────────────── */
+[data-testid="stPopover"] [data-testid="stPopoverBody"] {
+  background:var(--soft)!important;
+  border-radius:16px!important;
+  border:1px solid var(--line)!important;
+  box-shadow:var(--shadow-tile)!important;
+  padding:8px!important;
+  min-width:200px!important;
+}
+[data-testid="stPopover"] [data-testid="stPopoverBody"] button {
+  border-radius:999px!important;
+  border:none!important;
+  background:transparent!important;
+  color:var(--fg)!important;
+  font-weight:600!important;
+  font-size:13px!important;
+  text-align:left!important;
+  width:100%!important;
+  padding:8px 16px!important;
+}
+[data-testid="stPopover"] [data-testid="stPopoverBody"] button:hover {
+  background:var(--surface-2)!important;
+}
+[data-testid="stPopover"] [data-testid="stPopoverBody"] hr {
+  border-color:var(--line)!important;
+  margin:6px 0!important;
+}
+
+/* ── §24 · Responsive ────────────────────────────────────── */
+@media (max-width:1024px) {
+  [data-testid="block-container"] { max-width:100%!important; }
+}
+@media (max-width:768px) {
+  .vk-hero { font-size:56px; }
+  .vk-headline { font-size:26px; }
+  .vk-tile { padding:16px; border-radius:16px; }
+  [data-testid="stMain"] [data-testid="stSegmentedControl"] button {
+    padding:7px 12px!important; font-size:12px!important;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .vk-draw,.flash-up,.flash-down { animation:none!important; }
+  * { transition-duration:.01ms!important; animation-duration:.01ms!important; }
+}
