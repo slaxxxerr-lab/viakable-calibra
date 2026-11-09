@@ -19,7 +19,9 @@
 
 /* ── 2. Base ────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing:border-box; }
-.stApp, .stApp * { font-family:var(--font)!important; }
+.stApp, .stApp *:not([class*="material-symbols"]):not([class*="material-icon"]) { font-family:var(--font)!important; }
+/* Restore icon font after the broad override above */
+[class*="material-symbols"],[class*="material-icon"] { font-family:'Material Symbols Rounded','Material Icons'!important; }
 .stApp, [data-testid="stAppViewContainer"],
 [data-testid="stMain"], section.main { background:var(--bg)!important; }
 [data-testid="stHeader"] { background:var(--bg)!important; box-shadow:none!important; }
@@ -65,7 +67,7 @@ details[open] > summary::after {
 .lockup { display:flex; align-items:center; gap:10px; padding:2px 0; line-height:1; }
 .lg { display:flex; align-items:center; }
 .lg img { height:24px; width:auto; display:block; }
-.lg.chip img { background:#fff; border-radius:3px; padding:2px 4px; }
+.lg.chip img { background:var(--soft); border-radius:3px; padding:2px 4px; }
 .lg-text { font-size:1.2rem; font-weight:800; color:var(--fg); letter-spacing:-.02em; }
 .lk-sep  { display:inline-block; width:1px; height:16px; background:rgba(128,128,128,.4); flex-shrink:0; margin:0 2px; }
 .lk-name { font-size:1rem; font-weight:300; color:var(--fg); letter-spacing:.04em; }
@@ -74,7 +76,7 @@ details[open] > summary::after {
 /* ── 5. Connector ─────────────────────────────────────────  */
 .connector { display:flex; align-items:center; margin:3px 0; overflow:hidden; line-height:0; }
 .connector span:first-child { flex:1; height:1px; background:var(--line); }
-.connector span:last-child  { width:5px; height:5px; border-radius:50%; background:var(--accent); margin-left:6px; flex-shrink:0; }
+.connector span:last-child  { width:5px; height:5px; border-radius:50%; background:var(--muted); margin-left:6px; flex-shrink:0; }
 
 /* ── 6. Ticker ────────────────────────────────────────────  */
 div.ticker {
@@ -100,7 +102,7 @@ span.frl { font-weight:600; color:var(--fg); }
 
 /* ── 8. Alert bar ─────────────────────────────────────────  */
 div.alertbar {
-  padding:10px 14px; background:rgba(255,0,0,.05);
+  padding:10px 14px; background:var(--accent-soft);
   border-left:3px solid var(--accent);
   border-radius:0 var(--r-sm) var(--r-sm) 0;
   font-size:var(--sm); color:var(--fg); line-height:1.6; margin-bottom:6px;
@@ -202,7 +204,7 @@ span.wrap { white-space:normal; word-break:break-word; }
 .gauge-cap  { font-size:.6875rem; color:var(--muted); text-align:center; padding-bottom:10px; margin-top:3px; }
 .donut-hdr  { font-size:.6875rem; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); padding:10px 12px 6px; }
 .factor-row { display:flex; justify-content:space-between; align-items:center; padding:3px 12px; font-size:.75rem; gap:6px; }
-.factor-row.neg { background:rgba(255,0,0,.07); border-radius:4px; margin:1px 8px; padding:3px 4px; }
+.factor-row.neg { background:var(--accent-soft); border-radius:4px; margin:1px 8px; padding:3px 4px; }
 .factor-row.pos { margin:1px 8px; padding:3px 4px; }
 .factor-arrow { font-size:.7rem; flex-shrink:0; }
 .factor-lbl { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--fg); }
@@ -341,9 +343,15 @@ div.kpi {
   transition:all var(--dur) var(--ease)!important;
   white-space:nowrap!important;
 }
-[data-testid="stMain"] [data-testid="stSegmentedControl"] button[aria-selected="true"] {
+[data-testid="stMain"] [data-testid="stSegmentedControl"] button[aria-selected="true"],
+[data-testid="stMain"] [data-testid="stSegmentedControl"] button[aria-pressed="true"] {
   background:var(--fg)!important;
   color:var(--bg)!important;
+  box-shadow:var(--shadow-sm)!important;
+}
+[data-testid="stSegmentedControl"] button:focus { outline:none!important; box-shadow:none!important; }
+[data-testid="stMain"] [data-testid="stSegmentedControl"] button[aria-selected="true"]:focus,
+[data-testid="stMain"] [data-testid="stSegmentedControl"] button[aria-pressed="true"]:focus {
   box-shadow:var(--shadow-sm)!important;
 }
 /* Segmented control label */
@@ -516,3 +524,166 @@ div.kpi {
   .vk-draw,.flash-up,.flash-down { animation:none!important; }
   * { transition-duration:.01ms!important; animation-duration:.01ms!important; }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   §25 · Native widget token overrides (light + dark via tokens)
+   Every color uses --bg/--fg/--soft/--surface-2/--line/--muted/--accent
+   so the same rules adapt automatically to both themes.
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── A. All widget labels ──────────────────────────────────── */
+[data-testid="stWidgetLabel"] p,
+[data-testid="stWidgetLabel"] label,
+[data-testid="stSelectbox"] label p,
+[data-testid="stMultiSelect"] label p,
+[data-testid="stTextInput"] label p,
+[data-testid="stNumberInput"] label p,
+[data-testid="stTextArea"] label p,
+[data-testid="stSlider"] label p,
+[data-testid="stDateInput"] label p,
+[data-testid="stTimeInput"] label p,
+[data-testid="stCheckbox"] label p,
+[data-testid="stRadio"] label p,
+[data-testid="stToggle"] label p { color:var(--fg)!important; }
+
+/* ── B. Text / number inputs / textarea ───────────────────── */
+[data-testid="stTextInput"] [data-baseweb="input"],
+[data-testid="stNumberInput"] [data-baseweb="input"],
+[data-testid="stTextArea"] [data-baseweb="textarea"] {
+  background-color:var(--surface-2)!important;
+  border-color:var(--line)!important;
+}
+[data-testid="stTextInput"] input,
+[data-testid="stNumberInput"] input,
+[data-testid="stTextArea"] textarea {
+  color:var(--fg)!important;
+  background-color:transparent!important;
+  caret-color:var(--accent)!important;
+}
+[data-testid="stTextInput"] input::placeholder,
+[data-testid="stNumberInput"] input::placeholder,
+[data-testid="stTextArea"] textarea::placeholder { color:var(--muted)!important; }
+[data-testid="stNumberInput"] button {
+  background-color:var(--surface-2)!important;
+  border-color:var(--line)!important;
+  color:var(--fg)!important;
+}
+
+/* ── C. Selectbox / multiselect control ───────────────────── */
+[data-testid="stSelectbox"] [data-baseweb="select"] > div,
+[data-testid="stMultiSelect"] [data-baseweb="select"] > div {
+  background-color:var(--surface-2)!important;
+  border-color:var(--line)!important;
+}
+[data-testid="stSelectbox"] [data-baseweb="select"] > div > div span,
+[data-testid="stSelectbox"] [data-baseweb="select"] [data-baseweb="select-value-container"] > div,
+[data-testid="stMultiSelect"] [data-baseweb="select-value-container"] > div { color:var(--fg)!important; }
+[data-testid="stMultiSelect"] [data-baseweb="tag"] { background-color:var(--accent-soft)!important; }
+[data-testid="stMultiSelect"] [data-baseweb="tag"] span { color:var(--fg)!important; }
+[data-testid="stMultiSelect"] [data-baseweb="tag"] button { color:var(--muted)!important; }
+
+/* ── D. Dropdown menus — portal-rendered, need global scope ─ */
+[data-baseweb="menu"] { background-color:var(--soft)!important; border:1px solid var(--line)!important; box-shadow:var(--shadow-tile)!important; }
+[data-baseweb="option"] { background-color:var(--soft)!important; color:var(--fg)!important; }
+[data-baseweb="option"]:hover,[data-baseweb="option"][aria-selected="true"] { background-color:var(--surface-2)!important; }
+
+/* ── E. Radio buttons ──────────────────────────────────────── */
+[data-testid="stRadio"] [data-baseweb="radio"] div:first-child { border-color:var(--muted)!important; background:transparent!important; }
+[data-testid="stRadio"] [aria-checked="true"] [data-baseweb="radio"] div:first-child { background-color:var(--accent)!important; border-color:var(--accent)!important; }
+
+/* ── F. Checkbox ───────────────────────────────────────────── */
+[data-baseweb="checkbox"] > div:first-child { background-color:transparent!important; border-color:var(--muted)!important; }
+[data-baseweb="checkbox"][aria-checked="true"] > div:first-child,
+[data-baseweb="checkbox"][aria-checked="mixed"] > div:first-child { background-color:var(--accent)!important; border-color:var(--accent)!important; }
+
+/* ── G. Toggle (switch) ─────────────────────────────────────── */
+[data-testid="stToggle"] [role="switch"] { background-color:var(--line)!important; }
+[data-testid="stToggle"] [role="switch"][aria-checked="true"] { background-color:var(--accent)!important; }
+
+/* ── H. Slider ──────────────────────────────────────────────── */
+[data-testid="stSlider"] [data-testid="stTickBarMin"],
+[data-testid="stSlider"] [data-testid="stTickBarMax"] { color:var(--muted)!important; }
+[data-testid="stSlider"] [role="slider"] { background:var(--accent)!important; border-color:var(--accent)!important; }
+[data-testid="stSlider"] [data-baseweb="slider"] > div > div { background:var(--line)!important; }
+[data-testid="stSlider"] [data-baseweb="slider"] > div > div ~ div { background:var(--accent)!important; }
+
+/* ── I. Date input + calendar picker ───────────────────────── */
+[data-testid="stDateInput"] [data-baseweb="input"] { background-color:var(--surface-2)!important; border-color:var(--line)!important; }
+[data-testid="stDateInput"] input { color:var(--fg)!important; }
+[data-baseweb="calendar"] { background-color:var(--soft)!important; border-color:var(--line)!important; }
+[data-baseweb="calendar"] button { color:var(--fg)!important; background:transparent!important; }
+[data-baseweb="calendar"] button[aria-selected="true"] { background:var(--accent)!important; color:#fff!important; }
+[data-baseweb="calendar"] [data-baseweb="select"] > div { background-color:var(--surface-2)!important; border-color:var(--line)!important; }
+
+/* ── J. File uploader ───────────────────────────────────────── */
+[data-testid="stFileUploaderDropzone"] { background-color:var(--surface-2)!important; border-color:var(--muted)!important; }
+[data-testid="stFileUploaderDropzone"] p,[data-testid="stFileUploaderDropzone"] small { color:var(--muted)!important; }
+
+/* ── K. Expander ────────────────────────────────────────────── */
+[data-testid="stExpander"] summary p,
+[data-testid="stExpander"] summary span,
+[data-testid="stExpander"] summary { color:var(--fg)!important; }
+[data-testid="stExpander"] [data-testid="stExpanderDetails"] { border-color:var(--line)!important; }
+[data-testid="stExpander"] summary:hover { background:var(--surface-2)!important; border-radius:var(--r-md)!important; }
+
+/* ── L. Pills / toggle button group ────────────────────────── */
+[data-testid="stPillsToggleButtonGroup"] button,
+[data-testid="stToggleButtonGroup"] button {
+  background:var(--surface-2)!important;
+  color:var(--muted)!important;
+  border:1px solid var(--line)!important;
+  border-radius:999px!important;
+  font-weight:600!important;
+}
+[data-testid="stPillsToggleButtonGroup"] button[aria-pressed="true"],
+[data-testid="stPillsToggleButtonGroup"] button[aria-selected="true"],
+[data-testid="stToggleButtonGroup"] button[aria-pressed="true"],
+[data-testid="stToggleButtonGroup"] button[aria-selected="true"] {
+  background:var(--fg)!important;
+  color:var(--bg)!important;
+  border-color:var(--fg)!important;
+}
+
+/* ── M. Alerts ──────────────────────────────────────────────── */
+[data-testid="stAlert"] { background-color:var(--surface-2)!important; }
+[data-testid="stAlert"] p { color:var(--fg)!important; }
+
+/* ── N. Tabs ────────────────────────────────────────────────── */
+[data-testid="stTabs"] [data-baseweb="tab-list"] { background-color:transparent!important; border-bottom:1px solid var(--line)!important; }
+[data-testid="stTabs"] [data-baseweb="tab"] { color:var(--muted)!important; background-color:transparent!important; }
+[data-testid="stTabs"] [aria-selected="true"][data-baseweb="tab"] { color:var(--fg)!important; }
+[data-testid="stTabs"] [data-baseweb="tab-highlight"] { background-color:var(--accent)!important; }
+
+/* ── O. Metric widget ──────────────────────────────────────── */
+[data-testid="stMetric"] > label { color:var(--muted)!important; }
+[data-testid="stMetric"] [data-testid="stMetricValue"] { color:var(--fg)!important; }
+
+/* ── P. Caption ─────────────────────────────────────────────── */
+[data-testid="stCaptionContainer"] p,.stCaption { color:var(--muted)!important; }
+
+/* ── Q. Markdown body text ──────────────────────────────────── */
+.stMarkdown p,.stMarkdown li,.stMarkdown h1,.stMarkdown h2,.stMarkdown h3,
+.stMarkdown h4,.stMarkdown h5,.stMarkdown h6 { color:var(--fg)!important; }
+
+/* ── R. Tooltip (BaseWeb) ───────────────────────────────────── */
+[data-baseweb="tooltip"] [data-baseweb="block"] { background-color:var(--fg)!important; color:var(--bg)!important; }
+
+/* ── S. Progress ─────────────────────────────────────────────── */
+[data-testid="stProgress"] > div { background-color:var(--line)!important; }
+[data-testid="stProgress"] > div > div { background-color:var(--accent)!important; }
+
+/* ── T. Form container ─────────────────────────────────────── */
+[data-testid="stForm"] { background-color:var(--soft)!important; border-color:var(--line)!important; }
+
+/* ── U. Code blocks ─────────────────────────────────────────── */
+.stCodeBlock pre,.stCode pre { background-color:var(--surface-2)!important; }
+code { background-color:var(--surface-2)!important; color:var(--fg)!important; }
+
+/* ── V. Scrollbars ──────────────────────────────────────────── */
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--line); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--muted); }
+
+/* ── W. Text selection ──────────────────────────────────────── */
+::selection { background:var(--accent-soft); }
