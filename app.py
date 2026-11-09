@@ -3244,46 +3244,51 @@ def section_clientes():
     cust = CRM.customers()
     stats = customer_stats(m, dim)
     opps_all = CRM.opps()
-    left, right = layout()
-    with left:
-        types = sorted({c["type"] for c in cust})
+    types = sorted({c["type"] for c in cust})
+    _cf1, _cf2, _cf3 = st.columns([2, 2, 3], gap="medium")
+    with _cf1:
         wid(st.pills, t("Tipo"), "chips_cu_type", types, options=types, selection_mode="multi", format_func=t)
+    with _cf2:
         wid(st.pills, t("País"), "chips_cu_country", ["MX", "US"], options=["MX", "US"], selection_mode="multi", format_func=lambda x: t("México") if x == "MX" else t("EE. UU."))
-        q = wid(st.text_input, t("Buscar"), "cu_q", "")
-        if can("clientes"):
-            with st.expander(t("Nuevo cliente")):
-                with st.form("new_cu", clear_on_submit=True):
-                    n = st.text_input(t("Nombre"))
-                    ty = st.selectbox(t("Tipo"), ["Cliente", "Distribuidor", "Constructora", "Fuerza de venta"], format_func=t)
-                    co = st.radio(t("País"), ["MX", "US"], horizontal=True, format_func=lambda x: t("México") if x == "MX" else t("EE. UU."))
-                    key = st.text_input(t("Valor en los datos de ventas (opcional)"), help=t("Si el nombre es igual al que trae tu archivo, se enlazan las ventas."))
-                    if st.form_submit_button(t("Guardar cliente"), type="primary") and n.strip():
-                        CRM.save_customer({"name": n.strip(), "type": ty, "country": co, "data_key": key.strip(), "owner": who()}, who(), role())
-                        st.rerun()
-        else:
-            deny_note("clientes")
+    with _cf3:
+        q = wid(st.text_input, t("Buscar cliente"), "cu_q", "")
+    if can("clientes"):
+        with st.expander(t("Nuevo cliente")):
+            with st.form("new_cu", clear_on_submit=True):
+                n = st.text_input(t("Nombre"))
+                ty = st.selectbox(t("Tipo"), ["Cliente", "Distribuidor", "Constructora", "Fuerza de venta"], format_func=t)
+                co = st.radio(t("País"), ["MX", "US"], horizontal=True, format_func=lambda x: t("México") if x == "MX" else t("EE. UU."))
+                key = st.text_input(t("Valor en los datos de ventas (opcional)"), help=t("Si el nombre es igual al que trae tu archivo, se enlazan las ventas."))
+                if st.form_submit_button(t("Guardar cliente"), type="primary") and n.strip():
+                    CRM.save_customer({"name": n.strip(), "type": ty, "country": co, "data_key": key.strip(), "owner": who()}, who(), role())
+                    st.rerun()
+    else:
+        deny_note("clientes")
     sel_t, sel_c = store().get("chips_cu_type") or types, store().get("chips_cu_country") or ["MX", "US"]
     rows = [c for c in cust if c["type"] in sel_t and c["country"] in sel_c and (not q or q.lower() in c["name"].lower())]
     od = CRM.overdue_tasks()
-    with right:
-        st.html(ui.headline(t("Clientes: {n} registrados, {b} compran a la baja.", n=len(cust), b=sum(1 for c in cust if stats.get(c["data_key"], {}).get("baja"))),
-                            t("Perfil de cada cliente con su pronóstico, mezcla de calibres, oportunidades, actividades y tareas. Si tus datos no traen cliente, la fuerza de venta hace de cliente.")))
-        st.html(ui.kpis([(str(len(cust)), t("Clientes")), (str(len(opps_all)), t("Oportunidades")), (str(len(CRM.activities(tasks_only=True, open_only=True))), t("Tareas abiertas")),
-                         (Raw(f'<span class="{"neg" if od else ""}">{len(od)}</span>'), t("Tareas vencidas"))]))
-        table_rows = []
-        for c in rows:
-            s = stats.get(c["data_key"]) if c["data_key"] else None
-            badges = (f' <span class="badge fill">{esc(t("EE. UU."))}</span>' if c["country"] == "US" else "") + (f' <span class="badge warn">{esc(t("Compra a la baja"))}</span>' if s and s["baja"] else "") \
-                + (f' <span class="badge">{esc(t("ejemplo"))}</span>' if c["sample"] else "")
-            n_op = sum(1 for o in opps_all if o["customer_id"] == c["id"] and o["stage"] in CRM.OPEN_STAGES)
-            table_rows.append([Raw(f"<b>{esc(c['name'])}</b>{badges}"), t(c["type"]), f"{s['t12']:,.0f} {ui.UNIT}" if s else "—",
-                               Raw(f'<span class="{"neg" if s and s["chg"] is not None and s["chg"] < 0 else ""}">{s["chg"]:+.1f}%</span>') if s and s["chg"] is not None else "—", str(n_op)])
-        st.html(ui.table([t("Cliente"), t("Tipo"), t("Ventas 12 meses"), t("Cambio vs. 12 meses previos"), t("Oportunidades abiertas")], table_rows, num=(2, 3, 4), min_w=720))
-        if not rows:
-            return
-        ids = [c["id"] for c in rows]
-        cid = wid(st.selectbox, t("Ver el perfil de"), "cu_sel", ids[0], options=ids, format_func=lambda i: next(c["name"] for c in cust if c["id"] == i))
-        profile(CRM.customer(cid), m, dim, stats, opps_all)
+    _n_baja = sum(1 for c in cust if stats.get(c["data_key"], {}).get("baja"))
+    st.html(ui.section_header_html(
+        eyebrow=t("CLIENTES · {n} REGISTRADOS", n=len(cust)),
+        headline=t("Clientes: {n} registrados, {b} compran a la baja.", n=len(cust), b=_n_baja),
+        sub=t("Perfil de cada cliente con su pronóstico, mezcla de calibres, oportunidades, actividades y tareas. Si tus datos no traen cliente, la fuerza de venta hace de cliente."),
+    ))
+    st.html(ui.kpis([(str(len(cust)), t("Clientes")), (str(len(opps_all)), t("Oportunidades")), (str(len(CRM.activities(tasks_only=True, open_only=True))), t("Tareas abiertas")),
+                     (Raw(f'<span class="{"neg" if od else ""}">{len(od)}</span>'), t("Tareas vencidas"))]))
+    table_rows = []
+    for c in rows:
+        s = stats.get(c["data_key"]) if c["data_key"] else None
+        badges = (f' <span class="badge fill">{esc(t("EE. UU."))}</span>' if c["country"] == "US" else "") + (f' <span class="badge warn">{esc(t("Compra a la baja"))}</span>' if s and s["baja"] else "") \
+            + (f' <span class="badge">{esc(t("ejemplo"))}</span>' if c["sample"] else "")
+        n_op = sum(1 for o in opps_all if o["customer_id"] == c["id"] and o["stage"] in CRM.OPEN_STAGES)
+        table_rows.append([Raw(f"<b>{esc(c['name'])}</b>{badges}"), t(c["type"]), f"{s['t12']:,.0f} {ui.UNIT}" if s else "—",
+                           Raw(f'<span class="{"neg" if s and s["chg"] is not None and s["chg"] < 0 else ""}">{s["chg"]:+.1f}%</span>') if s and s["chg"] is not None else "—", str(n_op)])
+    st.html(ui.table([t("Cliente"), t("Tipo"), t("Ventas 12 meses"), t("Cambio vs. 12 meses previos"), t("Oportunidades abiertas")], table_rows, num=(2, 3, 4), min_w=720))
+    if not rows:
+        return
+    ids = [c["id"] for c in rows]
+    cid = wid(st.selectbox, t("Ver el perfil de"), "cu_sel", ids[0], options=ids, format_func=lambda i: next(c["name"] for c in cust if c["id"] == i))
+    profile(CRM.customer(cid), m, dim, stats, opps_all)
 
 
 def profile(c, m, dim, stats, opps_all):
@@ -3371,42 +3376,45 @@ def section_oportunidades():
     first = m["ym"].max() + pd.offsets.MonthBegin(1)
     arr = CRM.crm_arrays(opps_all, first, 12)
     w6 = sum(float(v[:6].sum()) for d in arr.values() for v in d.values())
-    left, right = layout()
-    with left:
+    _oc1, _oc2 = st.columns([3, 2], gap="medium")
+    with _oc1:
         gsel = wid(st.pills, t("Calibre"), "chips_op_cal", gauges, options=gauges, selection_mode="multi", format_func=ui.cal_label)
         st.caption(t("Las oportunidades abiertas entran al pronóstico ponderadas por la probabilidad de su etapa; las ganadas cuentan al 100% mientras no aparezcan en tus ventas."))
+    with _oc2:
         wid(st.toggle, t("Usar también las oportunidades de ejemplo en el pronóstico"), "crm_use_sample", False)
-        if can("oportunidades"):
-            with st.expander(t("Nueva oportunidad")):
-                opp_form(None, cust, gauges, first)
-        else:
-            deny_note("oportunidades")
+    if can("oportunidades"):
+        with st.expander(t("Nueva oportunidad")):
+            opp_form(None, cust, gauges, first)
+    else:
+        deny_note("oportunidades")
     sel = store().get("chips_op_cal") or gauges
-    with right:
-        st.html(ui.headline(t("Oportunidades: {a} abiertas suman {b} t de pipeline y {c} t ponderadas.", a=summ["open_n"], b=f"{summ['open_tons']:,.0f}", c=f"{summ['weighted_tons']:,.0f}"),
-                            t("Mover una oportunidad de etapa o cambiar sus toneladas actualiza el pronóstico al instante: las abiertas aportan {x} t a los próximos 6 meses.", x=f"{w6:,.0f}")))
-        val_open = sum(opp_value_mxn(o) for o in opps_all if o["stage"] in CRM.OPEN_STAGES)
-        st.html(ui.kpis([(f"{summ['open_tons']:,.0f} {ui.UNIT}", t("Pipeline abierto"), f"{ui.mxn(val_open)} · {summ['open_n']} " + t("oportunidades")), (f"{summ['weighted_tons']:,.0f} {ui.UNIT}", t("Pipeline ponderado"),
-                         t("{x} t por mes", x=f"{summ['weighted_month']:,.1f}")), (f"{summ['win_rate']:.0f}%" if summ["win_rate"] is not None else "—", t("Tasa de éxito"), t("{a} ganadas, {b} perdidas", a=summ["won_n"], b=summ["lost_n"])),
-                         (str(summ["closing_n"]), t("Cierran este mes"), f"{summ['closing_tons']:,.0f} {ui.UNIT}")]))
-        cols = st.columns(len(CRM.STAGES), gap="small")
-        names = [s for s, _ in CRM.STAGES]
-        for col, (stage, prob) in zip(cols, CRM.STAGES):
-            cards = [o for o in opps_all if o["stage"] == stage and o["gauge"] in sel]
-            with col:
-                st.html(f'<div class="kcol"><b>{esc(t(stage))}</b> <span class="syncnote">{prob}% · {len(cards)} · {sum(o["tons_month"] for o in cards):,.0f} {ui.UNIT}/{esc(t("mes"))}</span></div>')
-                for o in cards:
-                    cu = cust.get(o["customer_id"], {})
-                    us = f' <span class="badge fill">{esc(t("EE. UU."))}</span>' if cu.get("country") == "US" else ""
-                    st.html(f'<div class="kcard"><b>{esc(o["name"])}</b><br><span class="syncnote">{esc(cu.get("name", "—"))}{us}</span><br>'
-                            f'{esc(ui.cal_label(o["gauge"]))} · {o["tons_month"]:,.1f} {ui.UNIT}/{esc(t("mes"))} × {o["months"]}<br><span class="syncnote">{esc(t("cierra"))} {esc(o["close_date"] or "—")}</span></div>')
-                    k = f"mv_{o['id']}"
-                    st.session_state[k] = o["stage"]
-                    st.selectbox(t("Mover a"), names, key=k, label_visibility="collapsed", format_func=t, on_change=move_cb, args=(o["id"], k), disabled=not can("oportunidades"))
-        if can("oportunidades") and opps_all:
-            st.html(ui.h2(t("Editar una oportunidad")))
-            oid = wid(st.selectbox, t("Oportunidad"), "op_sel", opps_all[0]["id"], options=[o["id"] for o in opps_all], format_func=lambda i: next(o["name"] for o in opps_all if o["id"] == i))
-            opp_form(next(o for o in opps_all if o["id"] == oid), cust, gauges, first)
+    st.html(ui.section_header_html(
+        eyebrow=t("PIPELINE · {n} OPORTUNIDADES ABIERTAS", n=summ["open_n"]),
+        headline=t("Oportunidades: {a} abiertas suman {b} t de pipeline y {c} t ponderadas.", a=summ["open_n"], b=f"{summ['open_tons']:,.0f}", c=f"{summ['weighted_tons']:,.0f}"),
+        sub=t("Mover una oportunidad de etapa o cambiar sus toneladas actualiza el pronóstico al instante: las abiertas aportan {x} t a los próximos 6 meses.", x=f"{w6:,.0f}"),
+    ))
+    val_open = sum(opp_value_mxn(o) for o in opps_all if o["stage"] in CRM.OPEN_STAGES)
+    st.html(ui.kpis([(f"{summ['open_tons']:,.0f} {ui.UNIT}", t("Pipeline abierto"), f"{ui.mxn(val_open)} · {summ['open_n']} " + t("oportunidades")), (f"{summ['weighted_tons']:,.0f} {ui.UNIT}", t("Pipeline ponderado"),
+                     t("{x} t por mes", x=f"{summ['weighted_month']:,.1f}")), (f"{summ['win_rate']:.0f}%" if summ["win_rate"] is not None else "—", t("Tasa de éxito"), t("{a} ganadas, {b} perdidas", a=summ["won_n"], b=summ["lost_n"])),
+                     (str(summ["closing_n"]), t("Cierran este mes"), f"{summ['closing_tons']:,.0f} {ui.UNIT}")]))
+    cols = st.columns(len(CRM.STAGES), gap="small")
+    names = [s for s, _ in CRM.STAGES]
+    for col, (stage, prob) in zip(cols, CRM.STAGES):
+        cards = [o for o in opps_all if o["stage"] == stage and o["gauge"] in sel]
+        with col:
+            st.html(f'<div class="kcol"><b>{esc(t(stage))}</b> <span class="syncnote">{prob}% · {len(cards)} · {sum(o["tons_month"] for o in cards):,.0f} {ui.UNIT}/{esc(t("mes"))}</span></div>')
+            for o in cards:
+                cu = cust.get(o["customer_id"], {})
+                us = f' <span class="badge fill">{esc(t("EE. UU."))}</span>' if cu.get("country") == "US" else ""
+                st.html(f'<div class="kcard"><b>{esc(o["name"])}</b><br><span class="syncnote">{esc(cu.get("name", "—"))}{us}</span><br>'
+                        f'{esc(ui.cal_label(o["gauge"]))} · {o["tons_month"]:,.1f} {ui.UNIT}/{esc(t("mes"))} × {o["months"]}<br><span class="syncnote">{esc(t("cierra"))} {esc(o["close_date"] or "—")}</span></div>')
+                k = f"mv_{o['id']}"
+                st.session_state[k] = o["stage"]
+                st.selectbox(t("Mover a"), names, key=k, label_visibility="collapsed", format_func=t, on_change=move_cb, args=(o["id"], k), disabled=not can("oportunidades"))
+    if can("oportunidades") and opps_all:
+        st.html(ui.h2(t("Editar una oportunidad")))
+        oid = wid(st.selectbox, t("Oportunidad"), "op_sel", opps_all[0]["id"], options=[o["id"] for o in opps_all], format_func=lambda i: next(o["name"] for o in opps_all if o["id"] == i))
+        opp_form(next(o for o in opps_all if o["id"] == oid), cust, gauges, first)
 
 
 def opp_form(o, cust, gauges, first):
