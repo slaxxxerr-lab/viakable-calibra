@@ -3584,59 +3584,130 @@ def section_inicio():
     h = 6
     pr = cached_project(m, tuple((g,) for g in gauges), None, h, E.AUTO, E.TON, "sum", mult, sig, w, prices, ml, get_crm(None, E.TON, prices), apply_signals_on())
     res = cached_plan(m, gauges, h, params, prices, mult, sig, w, {"metal": sv("ov_metal", {}), "inv": sv("ov_inv", {}), "cap": sv("ov_cap", {})}, ml, get_crm(None, E.TON, prices))
-    tot = PL.totals(res)
-    summ = CRM.pipeline_summary(CRM.opps())
-    od = CRM.overdue_tasks()
+
+    # ── data prep ─────────────────────────────────────────────────────────────
+    fc_total = float(pr.fc.sum())
+    lo_total = float(pr.lo.sum())
+    hi_total = float(pr.hi.sum())
+    precision = max(0.0, 100.0 - pr.error) if np.isfinite(pr.error) else 0.0
+
+    period_label = ""
+    try:
+        if pr.index and len(pr.index) >= 2:
+            period_label = f"{ui.mes(pr.index[0])} – {ui.mes(pr.index[-1])}"
+    except Exception:
+        pass
+
+    _hist_arr = pr.hist.values if hasattr(pr.hist, "values") else np.array([], float)
+    _n = len(_hist_arr)
+    _prev = float(np.sum(_hist_arr[max(0, _n - h * 2):max(0, _n - h)])) if _n >= h else float(np.sum(_hist_arr))
+    yoy_pct = (fc_total - _prev) / _prev * 100.0 if _prev > 0 else 0.0
+
+    safe_n = sum(1 for d in pr.detail if np.isfinite(d["error"]) and (100 - d["error"]) >= 80)
+    total_n = max(len(pr.detail), 1)
+
+    worst_cal = None
+    _worst_prec = 100.0
+    for _d in pr.detail:
+        if np.isfinite(_d["error"]):
+            _p = 100 - _d["error"]
+            if _p < _worst_prec:
+                _worst_prec = _p
+                worst_cal = _d["label"]
+    if _worst_prec >= 80:
+        worst_cal = None
+
+    demand_class = pr.detail[0]["demand"] if len(pr.detail) == 1 else t("Mixta")
+
+    top_cust = []
+    try:
+        _m_last = m[m["ym"] >= (m["ym"].max() - pd.DateOffset(months=11))]
+        _m_prev = m[(m["ym"] >= (m["ym"].max() - pd.DateOffset(months=23))) &
+                    (m["ym"] < (m["ym"].max() - pd.DateOffset(months=11)))]
+        _cli_last = _m_last.groupby("cli")["qty"].sum()
+        _cli_prev = _m_prev.groupby("cli")["qty"].sum()
+        for _c, _q in _cli_last.nlargest(5).items():
+            _prev_q = float(_cli_prev.get(_c, 0))
+            _yoy_c = (_q - _prev_q) / _prev_q * 100 if _prev_q > 0 else 0.0
+            top_cust.append({"name": _c, "qty": float(_q), "yoy": _yoy_c})
+    except Exception:
+        pass
+
     frozen_rows = CRM.frozen_list()
     alerts = business_alerts(m, pr, res, frozen_rows)
-    st.html(ui.headline(t("Esperamos {v} {u} en los próximos {h} meses.", v=f"{pr.fc.sum():,.0f}", u=ui.UNIT, h=h),
-                        t("Inicio resume el pronóstico, el plan, el CRM y lo que hay que atender hoy. Toca un mosaico para ver su detalle.")))
-    st.button(t("Resumen del mes"), key="btn_summary", type="primary", on_click=lambda: store().__setitem__("show_summary", not store().get("show_summary", False)))
-    if store().get("show_summary", False):
-        summary_panel(m, pr, res, alerts, h, ml)
-    insights_box(h)
-    news_hi = len(NEWS.load(days=14, relevance=["Alta"], statuses=["nuevo", "relevante"]))
-    with st.container(key="tiles"):
-        cols = st.columns(6, gap="small")
-        with cols[0]:
-            tile("fc", f"{pr.fc.sum():,.0f} {ui.UNIT}", t("Pronóstico {h} meses", h=h), t("rango {a} – {b}", a=f"{pr.lo.sum():,.0f}", b=f"{pr.hi.sum():,.0f}"), KPI_GO["fc"])
-        with cols[1]:
-            tile("acc", f"{max(0, 100 - pr.error):.1f}%", t("Precisión de validación"), t("ver el laboratorio") if adv() else t("ver el pronóstico"), KPI_GO["acc"] if adv() else "Pronóstico")
-        with cols[2]:
-            tile("mar", f"{tot['margin_pct']:.1f}%", t("Margen bruto"), ui.mxn(tot["margin"]), KPI_GO["mar"])
-        with cols[3]:
-            tile("pipe", f"{summ['weighted_tons']:,.0f} {ui.UNIT}", t("Pipeline ponderado"), t("{n} abiertas", n=summ["open_n"]), KPI_GO["pipe"])
-        with cols[4]:
-            tile("task", Raw(f'<span class="{"neg" if od else ""}">{len(od)}</span>'), t("Tareas vencidas"), t("ir a Clientes"), KPI_GO["task"])
-        with cols[5]:
-            tile("news", str(news_hi), t("Noticias de relevancia alta"), t("ir a Noticias"), KPI_GO["news"])
-    st.plotly_chart(ui.forecast_fig(list(pr.hist.index), pr.hist.values, list(pr.index), pr.fc, pr.lo, pr.hi, ui.UNIT, t("Suma de calibres"), height=330), width="stretch", theme=None, config={"displayModeBar": False})
-    # qué atender
-    items = alerts + [{"sev": "Alta" if True else "Media", "text": x, "action": t("Revisar el escenario de precio del metal y la recomendación de compra en Metales."), "section": "Metales", "kind": "mercado"}
-                      for x in _safe_market_texts()]
-    news_items = []
-    seen = {}
-    for r in NEWS.load(days=14, relevance=["Alta"], statuses=["nuevo", "relevante"]):
-        if seen.get(r["topic"], 0) >= 2:
+    mkt_items = [{"sev": "Alta", "text": x,
+                  "action": t("Revisar escenario de precio del metal en Compras de metal."),
+                  "section": "Compras de metal", "kind": "mercado"}
+                 for x in _safe_market_texts()]
+    all_items = sorted(alerts + mkt_items, key=lambda x: 0 if x["sev"] == "Alta" else 1)
+
+    news_items: list = []
+    _seen: dict = {}
+    for _r in NEWS.load(days=14, relevance=["Alta"], statuses=["nuevo", "relevante"]):
+        if _seen.get(_r["topic"], 0) >= 2:
             continue
-        seen[r["topic"]] = seen.get(r["topic"], 0) + 1
-        news_items.append(r)
-    st.html(ui.h2(t("Qué atender"), t("Alertas de negocio, de mercado y de noticias, cada una con la acción que sugiere. Nada cambia el pronóstico hasta que tú lo confirmas.")))
-    with st.container(key="alerts"):
-        if not items and not news_items:
-            st.html(f'<p class="hint">{esc(t("Sin alertas por ahora."))}</p>')
-        for i, it in enumerate(sorted(items, key=lambda x: 0 if x["sev"] == "Alta" else 1)[:10]):
-            st.html(f'<div class="alertbar{" soft" if it["sev"] != "Alta" else ""}">{esc(it["text"])}<br><b>{esc(t("Qué hacer"))}:</b> {esc(it["action"])}</div>')
-            if it["section"] != "Inicio":
-                st.button(t("Ir a {s}", s=t(it["section"])), key=f"go_{i}", on_click=nav_go, args=(it["section"],))
-        for i, r in enumerate(news_items):
-            st.html(news_card_html(r) + (f'<div class="alertbar"><b>{esc(t("Qué hacer"))}:</b> {esc(t(r["action"]["text"]))}</div>' if r["action"] else ""))
-            item_buttons(r, f"in{i}")
-    if adv():
-        anomaly_queue(m)
-    st.html(ui.h2(t("Últimas noticias relevantes")))
-    rows = latest_news(None, 4)
-    st.html("".join(news_card_html(r, compact=True) for r in rows) if rows else f'<p class="hint">{esc(t("Todavía no hay noticias guardadas."))}</p>')
+        _seen[_r["topic"]] = _seen.get(_r["topic"], 0) + 1
+        news_items.append(_r)
+        if len(news_items) >= 4:
+            break
+
+    # ── row 1: hero | rings | right ──────────────────────────────────────────
+    c_hero, c_rings, c_right = st.columns([1, 1, 1], gap="medium")
+
+    with c_hero:
+        st.html(ui.hoy_hero_html(
+            fc=fc_total, lo=lo_total, hi=hi_total,
+            precision=precision, yoy_pct=yoy_pct, h=h,
+            hist_arr=_hist_arr, fc_arr=pr.fc,
+            demand_class=demand_class, period_label=period_label,
+        ))
+
+    with c_rings:
+        rings_sel = wid(st.segmented_control, t("Horizonte"), "hoy_rings_h", "6M",
+                        options=["3M", "6M"], label_visibility="collapsed")
+        _rh = 3 if rings_sel == "3M" else 6
+        _fc_r = float(np.sum(pr.fc[:_rh]))
+        _prev_r = float(np.sum(_hist_arr[max(0, _n - _rh * 2):max(0, _n - _rh)])) if _n >= _rh else float(np.sum(_hist_arr))
+        yoy_r = (_fc_r - _prev_r) / _prev_r * 100.0 if _prev_r > 0 else 0.0
+        _prev_year = pr.index[0].year - 1 if pr.index else 2025
+        _next_fc_str = f"{float(pr.fc[0]):,.0f}" if len(pr.fc) > 0 else "—"
+        _next_lbl = ui.mes(pr.index[0]).upper() if pr.index else ""
+        st.html(ui.rings_tile_html(
+            yoy_frac=max(0.0, min(1.0, (100 + yoy_r) / 100)),
+            prec_frac=max(0.0, min(1.0, precision / 100)),
+            safe_frac=safe_n / total_n,
+            safe_n=safe_n, total_n=total_n,
+            center_label=_next_lbl, center_val=_next_fc_str,
+            yoy_pct=yoy_r, prev_year=_prev_year,
+            worst_cal=worst_cal,
+        ))
+
+    with c_right:
+        st.html(ui.atiende_hoy_html(all_items))
+        if st.button(t("Ajustar compras de metal →"), key="hoy_to_metal", use_container_width=True):
+            store()["nav_v2"] = "Compras de metal"
+            st.rerun()
+        st.html(ui.noticias_tile_html(news_items))
+
+    # ── row 2: caliber tiles + quién compra ──────────────────────────────────
+    st.html('<div style="height:12px"></div>')
+    cal_cols = st.columns(7, gap="small")
+    _fc_sum = max(fc_total, 1.0)
+    for _i, _det in enumerate(pr.detail[:6]):
+        with cal_cols[_i]:
+            _g = str(_det["label"])
+            _prec_d = max(0.0, 100.0 - _det["error"]) if np.isfinite(_det["error"]) else 0.0
+            _fc_next = float(_det["fc"][0]) if len(_det["fc"]) > 0 else 0.0
+            _fc_tot_d = float(np.sum(_det["fc"]))
+            _mix = _fc_tot_d / _fc_sum * 100
+            st.html(ui.caliber_tile_html(
+                g=_g, fc_next=_fc_next, fc_total=_fc_tot_d,
+                mix_pct=_mix, precision=_prec_d,
+                demand_class=_det.get("demand", "Estable"), h=h,
+            ))
+
+    with cal_cols[6]:
+        st.html(ui.quien_compra_tile_html(top_cust))
 
 
 def _safe_market_texts() -> list[str]:

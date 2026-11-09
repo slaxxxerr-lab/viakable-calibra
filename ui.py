@@ -812,7 +812,8 @@ def donut_html(steps, base_sum: float, final_sum: float, unit: str = "t") -> Raw
     )
 
 
-# ── Conclusion tile ───────────────────────────────────────────────────────────
+# ── Conclusion tile ────────────────────────────────────────────────────────────
+# (see also: Hoy components at end of file)
 
 def conclusion_tile_html(
     fc_next: float, lo_next: float, hi_next: float,
@@ -845,5 +846,329 @@ def conclusion_tile_html(
         f'{esc(t("Método"))}: {esc(t(method_name))}'
         f'</div></div>'
         f'</div>'
+        f'</div>'
+    )
+
+
+# ── Hoy page components ───────────────────────────────────────────────────────
+
+_CAL_TC_L = {"6":"#FF0000","10":"#0A0A0A","12":"#3A3A3A","14":"#6B6B6B","16":"#A0A0A0","18":"#CFCFCF"}
+_CAL_TC_D = {"6":"#FF2A2A","10":"#F5F5F5","12":"#CFCFCF","14":"#9A9A9A","16":"#6B6B6B","18":"#444448"}
+
+
+def cal_tile_color(g: str) -> str:
+    key = str(g).split()[0].split("+")[0].strip()
+    return (_CAL_TC_D if DARK else _CAL_TC_L).get(key, MUTED)
+
+
+def _hoy_sparkline_svg(hist_arr, fc_arr, width: int = 280, height: int = 52) -> str:
+    h_v = [float(x) for x in list(hist_arr)[-24:]]
+    f_v = [float(x) for x in list(fc_arr)]
+    all_v = h_v + f_v
+    if len(all_v) < 3:
+        return ""
+    mn, mx = min(all_v), max(all_v)
+    if mx <= mn:
+        mx = mn + 1.0
+    n_h, n_f = len(h_v), len(f_v)
+    n = n_h + n_f
+
+    def _x(i): return i / (n - 1) * width if n > 1 else 0.0
+    def _y(v): return (1.0 - (v - mn) / (mx - mn)) * height * 0.85 + height * 0.075
+
+    h_pts = [(_x(i), _y(h_v[i])) for i in range(n_h)]
+    f_pts = [(_x(n_h + i), _y(f_v[i])) for i in range(n_f)]
+    h_poly = " ".join(f"{x:.1f},{y:.1f}" for x, y in h_pts)
+    h_closed = f"0,{height} {h_poly} {h_pts[-1][0]:.1f},{height}"
+    f_line = " ".join(f"{x:.1f},{y:.1f}" for x, y in f_pts)
+    connect = f"{h_pts[-1][0]:.1f},{h_pts[-1][1]:.1f} {f_line}"
+    ex, ey = f_pts[-1] if f_pts else h_pts[-1]
+    tx = h_pts[-1][0] if h_pts else 0.0
+
+    return (
+        f'<svg viewBox="0 0 {width} {height}" width="100%" height="{height}" '
+        f'preserveAspectRatio="none" style="display:block">'
+        f'<polygon points="{h_closed}" fill="{FG}" opacity=".06"/>'
+        f'<polyline points="{h_poly}" fill="none" stroke="{FG}" '
+        f'stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>'
+        f'<line x1="{tx:.1f}" y1="0" x2="{tx:.1f}" y2="{height}" '
+        f'stroke="{RED}" stroke-width="1" stroke-dasharray="3 2" opacity=".4"/>'
+        f'<polyline points="{connect}" fill="none" stroke="{RED}" '
+        f'stroke-width="1.5" stroke-dasharray="4 3" stroke-linejoin="round"/>'
+        f'<circle cx="{ex:.1f}" cy="{ey:.1f}" r="3.5" fill="{RED}"/>'
+        f'</svg>'
+    )
+
+
+def hoy_hero_html(fc: float, lo: float, hi: float,
+                  precision: float, yoy_pct: float, h: int,
+                  hist_arr=None, fc_arr=None,
+                  demand_class: str = "Estable",
+                  period_label: str = "") -> Raw:
+    _G = "#1A9E4B"
+    prec_col = _G if precision >= 85 else ("#D97706" if precision >= 70 else RED)
+    yoy_sign = "▲" if yoy_pct >= 0 else "▼"
+    yoy_col = _G if yoy_pct >= 0 else RED
+    eye = esc(t("VENTA ESPERADA") + (f" · {period_label}" if period_label else ""))
+    sentence = esc(t("toneladas de cable en los próximos {h} meses.", h=h))
+    range_txt = esc(t("Lo más probable es que quede entre {a} y {b} t.", a=f"{lo:,.0f}", b=f"{hi:,.0f}"))
+    chip_prec = esc(t("Precisión {p}%", p=f"{precision:.0f}"))
+    chip_dem = esc(t("Demanda {d}", d=t(demand_class)))
+    chip_yoy = f"{yoy_sign} {abs(yoy_pct):.1f}% {esc(t('vs. año ant.'))}"
+    spark = ""
+    spark_labels = ""
+    if hist_arr is not None and fc_arr is not None and len(fc_arr) > 0:
+        spark = _hoy_sparkline_svg(hist_arr, fc_arr)
+        if spark:
+            spark_labels = (
+                f'<div style="display:flex;justify-content:space-between;'
+                f'font-family:\'JetBrains Mono\',monospace;font-size:9px;color:{MUTED};'
+                f'letter-spacing:.05em;margin-top:4px">'
+                f'<span>{esc(t("HISTORIAL"))}</span>'
+                f'<span style="color:{RED}">{esc(t("PRONÓSTICO"))} →</span>'
+                f'</div>'
+            )
+    return Raw(
+        f'<div class="vk-tile" style="padding:24px 24px 20px">'
+        f'<div class="vk-eyebrow" style="margin-bottom:8px">{eye}</div>'
+        f'<div class="vk-hero" style="line-height:1;margin-bottom:4px">{fc:,.0f}</div>'
+        f'<div style="font-size:17px;font-weight:600;color:{MUTED};letter-spacing:-.01em;margin-bottom:6px">'
+        f'{sentence}</div>'
+        f'<div style="font-size:13px;color:{MUTED};margin-bottom:16px;line-height:1.5">'
+        f'{range_txt}</div>'
+        f'<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:{"16px" if spark else "4px"}">'
+        f'<span style="background:{_rgba(prec_col,.1)};border-radius:999px;padding:4px 11px;'
+        f'font-size:12px;font-weight:700;color:{prec_col}">{chip_prec}</span>'
+        f'<span style="background:{_rgba(FG,.06)};border-radius:999px;padding:4px 11px;'
+        f'font-size:12px;font-weight:600;color:{MUTED}">{chip_dem}</span>'
+        f'<span style="background:{_rgba(yoy_col,.1)};border-radius:999px;padding:4px 11px;'
+        f'font-size:12px;font-weight:700;color:{yoy_col}">{chip_yoy}</span>'
+        f'</div>'
+        + (f'<div style="border-top:1px solid {LINE};padding-top:12px">'
+           f'{spark}{spark_labels}</div>' if spark else "")
+        + f'</div>'
+    )
+
+
+def _rings_svg(yoy_frac: float, prec_frac: float, safe_frac: float,
+               center_label: str, center_val: str) -> str:
+    import math
+    CX = CY = 90
+    specs = [
+        (70, 11, RED, max(0.0, min(1.0, float(yoy_frac)))),
+        (55, 11, FG, max(0.0, min(1.0, float(prec_frac)))),
+        (40, 10, MUTED, max(0.0, min(1.0, float(safe_frac)))),
+    ]
+    parts: list = []
+    for r, sw, color, frac in specs:
+        circ = 2 * math.pi * r
+        filled = frac * circ
+        parts.append(
+            f'<circle cx="{CX}" cy="{CY}" r="{r}" fill="none" stroke="{LINE}" stroke-width="{sw}"/>'
+        )
+        if filled > 0.5:
+            parts.append(
+                f'<circle cx="{CX}" cy="{CY}" r="{r}" fill="none" stroke="{color}" '
+                f'stroke-width="{sw}" stroke-linecap="round" '
+                f'stroke-dasharray="{filled:.1f} {circ:.1f}" '
+                f'transform="rotate(-90 {CX} {CY})"/>'
+            )
+    parts.append(
+        f'<text x="{CX}" y="{CY-9}" text-anchor="middle" font-family="\'JetBrains Mono\',monospace" '
+        f'font-size="9" fill="{MUTED}">{esc(center_label.upper() if center_label else "")}</text>'
+        f'<text x="{CX}" y="{CY+12}" text-anchor="middle" font-family="\'Inter Tight\',sans-serif" '
+        f'font-size="22" font-weight="800" fill="{FG}">{esc(center_val)}</text>'
+        f'<text x="{CX}" y="{CY+27}" text-anchor="middle" font-family="\'JetBrains Mono\',monospace" '
+        f'font-size="8" fill="{MUTED}">{esc(UNIT)}</text>'
+    )
+    return f'<svg viewBox="0 0 180 180" width="180" height="180">{"".join(parts)}</svg>'
+
+
+def rings_tile_html(yoy_frac: float, prec_frac: float, safe_frac: float,
+                    safe_n: int, total_n: int,
+                    center_label: str, center_val: str,
+                    yoy_pct: float = 0.0, prev_year: int = 2025,
+                    worst_cal=None) -> Raw:
+    _G = "#1A9E4B"
+    yoy_sign = "+" if yoy_pct >= 0 else ""
+    prec_pct = int(round(prec_frac * 100))
+    if worst_cal:
+        wc_key = str(worst_cal).split()[0].split("+")[0].strip()
+        worst_note = esc(t("el {c} pide cuidado", c=f"{wc_key} AWG"))
+    else:
+        worst_note = esc(t("todos confiables"))
+
+    ring_svg = _rings_svg(yoy_frac, prec_frac, safe_frac, center_label, center_val)
+
+    def _leg(dot, title, sub):
+        return (
+            f'<div style="display:flex;align-items:flex-start;gap:9px">'
+            f'<span style="width:11px;height:11px;border-radius:50%;background:{dot};'
+            f'flex-shrink:0;margin-top:2px"></span>'
+            f'<div><div style="font-size:12px;font-weight:700;color:{FG};line-height:1.3">{title}</div>'
+            f'<div style="font-size:11px;color:{MUTED};line-height:1.4">{sub}</div></div>'
+            f'</div>'
+        )
+
+    rows = (
+        _leg(RED,
+             esc(t("Vs. {y} · {s}{p}%", y=prev_year, s=yoy_sign, p=f"{abs(yoy_pct):.1f}")),
+             esc(t("de lo vendido en el mismo período")))
+        + _leg(FG,
+               esc(t("Precisión · {p}%", p=prec_pct)),
+               esc(t("de acierto en meses pasados")))
+        + _leg(MUTED,
+               esc(t("Calibres seguros · {s} de {total}", s=safe_n, total=total_n)),
+               worst_note)
+    )
+
+    return Raw(
+        f'<div class="vk-tile" style="padding:20px 20px 24px;display:flex;'
+        f'flex-direction:column;align-items:center">'
+        f'<div style="width:100%;display:flex;align-items:center;margin-bottom:12px">'
+        f'<span class="vk-eyebrow">ANILLOS DEL PRONÓSTICO</span>'
+        f'</div>'
+        f'<div style="margin:4px 0 16px">{ring_svg}</div>'
+        f'<div style="display:flex;flex-direction:column;gap:10px;width:100%">{rows}</div>'
+        f'</div>'
+    )
+
+
+def atiende_hoy_html(items: list) -> Raw:
+    n_high = sum(1 for x in items if x.get("sev") == "Alta")
+    dot_col = RED if n_high > 0 else MUTED
+    hdr_txt = esc(t("{n} alertas", n=n_high)) if n_high > 0 else esc(t("Sin alertas críticas"))
+
+    rows = []
+    for it in items[:5]:
+        is_hi = it.get("sev") == "Alta"
+        txt_low = str(it.get("text", "")).lower()
+        badge = "Cu" if ("cobre" in txt_low or "copper" in txt_low) else ("AL" if "alumin" in txt_low else "●")
+        badge_bg = RED if is_hi else _rgba(MUTED, .2)
+        badge_fg = "#FFFFFF" if is_hi else MUTED
+        txt = esc(str(it.get("text", ""))[:90])
+        rows.append(
+            f'<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;'
+            f'border-bottom:1px solid {LINE}">'
+            f'<span style="background:{badge_bg};color:{badge_fg};border-radius:4px;'
+            f'padding:2px 5px;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px">'
+            f'{esc(badge)}</span>'
+            f'<span style="font-size:12px;color:{FG};line-height:1.5">{txt}</span>'
+            f'</div>'
+        )
+
+    body = "".join(rows) if rows else (
+        f'<div style="font-size:13px;color:{MUTED};padding:12px 0">'
+        f'{esc(t("Sin alertas por ahora."))}</div>'
+    )
+    return Raw(
+        f'<div class="vk-tile-sm" style="padding:16px 18px">'
+        f'<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">'
+        f'<span style="width:7px;height:7px;border-radius:50%;background:{dot_col};flex-shrink:0"></span>'
+        f'<span class="vk-eyebrow">ATIENDE HOY · {hdr_txt}</span>'
+        f'</div>'
+        f'{body}'
+        f'</div>'
+    )
+
+
+def noticias_tile_html(news_items: list) -> Raw:
+    rows = []
+    for r in news_items[:4]:
+        date_str = str(r.get("date") or r.get("published_at") or "")[:10]
+        topic = esc(str(r.get("topic", ""))[:22])
+        title = esc(str(r.get("title", r.get("headline", "")))[:75])
+        source = esc(str(r.get("source", ""))[:25])
+        rows.append(
+            f'<div style="padding:7px 0;border-bottom:1px solid {LINE}">'
+            f'<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:{MUTED}">'
+            f'{esc(date_str)}</span>'
+            f'<span style="background:{_rgba(FG,.07)};border-radius:3px;padding:1px 5px;'
+            f'font-size:10px;color:{MUTED}">{topic}</span>'
+            f'</div>'
+            f'<div style="font-size:12px;font-weight:600;color:{FG};line-height:1.4">{title}</div>'
+            f'<div style="font-size:10px;color:{MUTED};margin-top:1px">{source}</div>'
+            f'</div>'
+        )
+    body = "".join(rows) if rows else (
+        f'<div style="font-size:12px;color:{MUTED};padding:8px 0">'
+        f'{esc(t("No hay noticias recientes."))}</div>'
+    )
+    return Raw(
+        f'<div class="vk-tile-sm" style="padding:14px 18px">'
+        f'<span class="vk-eyebrow" style="display:block;margin-bottom:8px">NOTICIAS DEL SECTOR</span>'
+        f'{body}'
+        f'</div>'
+    )
+
+
+def caliber_tile_html(g: str, fc_next: float, fc_total: float,
+                      mix_pct: float, precision: float,
+                      demand_class: str = "Estable", h: int = 6) -> Raw:
+    _G, _A = "#1A9E4B", "#D97706"
+    color = cal_tile_color(g)
+    if precision >= 90:
+        badge_col, badge_lbl = _G, t("Muy seguro")
+    elif precision >= 80:
+        badge_col, badge_lbl = "#2563EB", t("Seguro")
+    elif precision >= 70:
+        badge_col, badge_lbl = _A, t("Aceptable")
+    else:
+        badge_col, badge_lbl = RED, t("Con cuidado")
+    key = str(g).split()[0].split("+")[0].strip()
+    lbl = f"{key} AWG" if key.isdigit() else str(g)
+    sub_total = esc(t("{v} t en {h} m", v=f"{fc_total:,.0f}", h=h))
+    return Raw(
+        f'<div class="vk-tile-sm" style="padding:14px 15px">'
+        f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+        f'<div style="display:flex;align-items:center;gap:6px">'
+        f'<span style="width:10px;height:10px;border-radius:50%;background:{color};flex-shrink:0"></span>'
+        f'<span style="font-size:12px;font-weight:700;color:{FG}">{esc(lbl)}</span>'
+        f'</div>'
+        f'<span style="font-size:11px;color:{MUTED}">{mix_pct:.1f}%</span>'
+        f'</div>'
+        f'<div style="font-size:38px;font-weight:800;letter-spacing:-.03em;color:{FG};'
+        f'line-height:1;margin-bottom:2px">{fc_next:,.0f}</div>'
+        f'<div style="font-size:11px;color:{MUTED};margin-bottom:6px">'
+        f'{esc(UNIT)} · {esc(t("próximo mes"))}</div>'
+        f'<div style="font-size:11px;color:{MUTED};margin-bottom:10px">{sub_total}</div>'
+        f'<div style="display:flex;align-items:center;gap:5px">'
+        f'<span style="width:7px;height:7px;border-radius:50%;background:{badge_col}"></span>'
+        f'<span style="font-size:11px;font-weight:600;color:{badge_col}">{esc(badge_lbl)}</span>'
+        f'<span style="font-size:11px;color:{MUTED}"> · {precision:.0f}%</span>'
+        f'</div>'
+        f'</div>'
+    )
+
+
+def quien_compra_tile_html(customers: list) -> Raw:
+    _G = "#1A9E4B"
+    rows = []
+    for c in customers[:5]:
+        name = esc(str(c.get("name", "—"))[:22])
+        qty = float(c.get("qty", 0))
+        yoy_v = float(c.get("yoy", 0.0) or 0.0)
+        yoy_sign = "▲" if yoy_v >= 0 else "▼"
+        yoy_col = _G if yoy_v >= 0 else RED
+        rows.append(
+            f'<div style="display:flex;align-items:center;justify-content:space-between;'
+            f'padding:6px 0;border-bottom:1px solid {LINE}">'
+            f'<span style="font-size:12px;font-weight:600;color:{FG};min-width:0;overflow:hidden;'
+            f'text-overflow:ellipsis;white-space:nowrap;flex:1">{name}</span>'
+            f'<div style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:5px">'
+            f'<span style="font-size:11px;color:{MUTED}">{qty:,.0f} {esc(UNIT)}</span>'
+            f'<span style="font-size:11px;font-weight:700;color:{yoy_col}">'
+            f'{yoy_sign}{abs(yoy_v):.1f}%</span>'
+            f'</div></div>'
+        )
+    body = "".join(rows) if rows else (
+        f'<div style="font-size:12px;color:{MUTED};padding:8px 0">'
+        f'{esc(t("Sin datos de clientes."))}</div>'
+    )
+    return Raw(
+        f'<div class="vk-tile-sm" style="padding:14px 15px">'
+        f'<span class="vk-eyebrow" style="display:block;margin-bottom:8px">QUIÉN COMPRA · 12M</span>'
+        f'{body}'
         f'</div>'
     )
