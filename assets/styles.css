@@ -69,7 +69,7 @@ details[open] > summary::after {
 .lg img { height:24px; width:auto; display:block; }
 .lg.chip img { background:var(--soft); border-radius:3px; padding:2px 4px; }
 .lg-text { font-size:1.2rem; font-weight:800; color:var(--fg); letter-spacing:-.02em; }
-.lk-sep  { display:inline-block; width:1px; height:16px; background:rgba(128,128,128,.4); flex-shrink:0; margin:0 2px; }
+.lk-sep  { display:inline-block; width:1px; height:16px; background:var(--muted); opacity:.4; flex-shrink:0; margin:0 2px; }
 .lk-name { font-size:1rem; font-weight:300; color:var(--fg); letter-spacing:.04em; }
 .product { font-size:var(--xs); color:var(--muted); margin-top:3px; }
 
@@ -89,7 +89,7 @@ span.tk b { font-weight:700; color:var(--fg); }
 span.tkl { font-size:var(--xs); }
 span.tkc { font-size:var(--xs); font-weight:600; }
 span.tkw { font-size:var(--xs); color:var(--warn); }
-@keyframes vk-flash-up   { 0%{color:#22c55e} 100%{color:var(--fg)} }
+@keyframes vk-flash-up   { 0%{color:var(--ok)} 100%{color:var(--fg)} }
 @keyframes vk-flash-down { 0%{color:var(--accent)} 100%{color:var(--fg)} }
 .flash-up   { animation:vk-flash-up   .9s var(--ease); }
 .flash-down { animation:vk-flash-down .9s var(--ease); }
@@ -152,7 +152,7 @@ span.acc i { display:inline-block; width:7px; height:7px; border-radius:50%; fle
 span.dc { display:inline-flex; align-items:center; padding:2px 8px; border-radius:20px; font-size:var(--xs); font-weight:600; white-space:nowrap; vertical-align:middle; line-height:1.5; }
 span.dc.smooth       { background:var(--ok-bg);         color:var(--ok); }
 span.dc.erratic      { background:var(--warn-bg);       color:var(--warn); }
-span.dc.intermittent { background:rgba(72,179,246,.12); color:#48b3f6; }
+span.dc.intermittent { background:rgba(72,179,246,.12); color:var(--blue); }
 span.dc.lumpy        { background:var(--soft);           color:var(--muted); }
 span.tag { display:inline-flex; align-items:center; padding:2px 7px; border-radius:var(--r-xs); font-size:var(--xs); font-weight:600; border:1px solid var(--accent); color:var(--accent); white-space:nowrap; vertical-align:middle; line-height:1.5; margin:0 2px; }
 span.neg { color:var(--accent); font-weight:600; }
