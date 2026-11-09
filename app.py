@@ -2837,79 +2837,81 @@ def section_laboratorio():
     ml = get_ml(m, E.windows_for(m))
     prices = get_prices()
     mk = [x for x in (MKT_NAC, MKT_USA) if x in set(m["mkt"])]
-    left, right = layout()
-    with left:
-        market = None
+    _lb1, _lb2 = st.columns([3, 1], gap="medium")
+    market = None
+    with _lb1:
         if len(mk) > 1:
             market = wid(st.radio, t("Mercado"), "seg_mkt", "Todos", options=["Todos", *mk], horizontal=True, format_func=t)
             market = None if market == "Todos" else market
         st.caption(t("Todos los modelos se entrenan con todos los productos a la vez, con las mismas variables y la misma validación cruzada de origen móvil."))
-        if st.button(t("Reentrenar todos los modelos"), key="lab_retrain"):
+    with _lb2:
+        if st.button(t("Reentrenar modelos"), key="lab_retrain", use_container_width=True):
             cached_ml.clear()
             st.session_state.get("ml_spec", {}).clear()
             st.rerun()
     units = [[g] for g in prep.gauges]
     allg = tuple(prep.gauges)
-    mx = cached_matrix(m, tuple(tuple(x) for x in units), market, E.TON, prices, ml)          # error % por método (filas) y selección (columnas)
+    mx = cached_matrix(m, tuple(tuple(x) for x in units), market, E.TON, prices, ml)
     bt = cached_bt(m, allg, market, E.TON, prices, ml)
     secs = bt.set_index("Método")["Tiempo s"]
     cols = list(mx.columns)
     win = {c: mx[c].idxmin() for c in cols if mx[c].notna().any()}
-    with right:
-        total_w = win.get("Total", "")
-        st.html(ui.headline(t("Laboratorio de modelos: {w} es el más certero en el total con {p}% de precisión.", w=t(total_w), p=f"{max(0, 100 - mx.loc[total_w, 'Total']):.1f}"),
-                            t("Cada modelo se evalúa contra los últimos meses reales con validación cruzada de origen móvil. La precisión es 100 menos el error MAPE; "
-                              "no se usa R².")))
-        by_type = {}
+    total_w = win.get("Total", "")
+    st.html(ui.section_header_html(
+        eyebrow=t("LABORATORIO DE MODELOS · GANADOR: {w}", w=t(total_w).upper()),
+        headline=t("Laboratorio de modelos: {w} es el más certero en el total con {p}% de precisión.", w=t(total_w), p=f"{max(0, 100 - mx.loc[total_w, 'Total']):.1f}"),
+        sub=t("Cada modelo se evalúa contra los últimos meses reales con validación cruzada de origen móvil. La precisión es 100 menos el error MAPE; no se usa R²."),
+    ))
+    by_type = {}
+    for c in cols:
+        by_type.setdefault(E.TYPE_OF.get(win.get(c, ""), ""), []).append(c)
+    st.html(ui.kpis([(str(len(mx)), t("Modelos evaluados")), (t(E.TYPE_OF.get(total_w, "")), t("Tipo del ganador en el total")),
+                     (str(len([c for c in cols if c != "Total" and E.TYPE_OF.get(win.get(c, "")) != "Estadístico"])), t("Calibres que gana un modelo que no es estadístico")),
+                     (f"{ml['time_all']:.0f} s", t("Entrenamiento de los modelos de ML (una vez)"), t("después queda en caché"))]))
+    order = mx.sort_values("Total", na_position="last").index
+    rows = []
+    for name in order:
+        cells = [Raw(f"<b>{esc(t(name))}</b>"), t(E.TYPE_OF.get(name, ""))]
+        won = []
         for c in cols:
-            by_type.setdefault(E.TYPE_OF.get(win.get(c, ""), ""), []).append(c)
-        st.html(ui.kpis([(str(len(mx)), t("Modelos evaluados")), (t(E.TYPE_OF.get(total_w, "")), t("Tipo del ganador en el total")),
-                         (str(len([c for c in cols if c != "Total" and E.TYPE_OF.get(win.get(c, "")) != "Estadístico"])), t("Calibres que gana un modelo que no es estadístico")),
-                         (f"{ml['time_all']:.0f} s", t("Entrenamiento de los modelos de ML (una vez)"), t("después queda en caché"))]))
-        order = mx.sort_values("Total", na_position="last").index
-        rows = []
-        for name in order:
-            cells = [Raw(f"<b>{esc(t(name))}</b>"), t(E.TYPE_OF.get(name, ""))]
-            won = []
-            for c in cols:
-                e_ = mx.loc[name, c]
-                if not np.isfinite(e_):
-                    cells.append("—")
-                    continue
-                p_ = f"{max(0, 100 - e_):.1f}%"
-                if win.get(c) == name:
-                    cells.append(Raw(f'<span class="win">{p_}</span>'))
-                    won.append(c)
-                else:
-                    cells.append(p_)
-            cells.append(lab_time(secs.get(name, np.nan) if name not in E.ML_FAMILY else ml_time_of(ml, name)))
-            cells.append(", ".join(ui.cal_label(c) if c.isdigit() else t(c) for c in won) or "—")
-            rows.append(cells)
-        heads = [t("Modelo"), t("Tipo")] + [t("Total") if c == "Total" else ui.cal_label(c) for c in cols] + [t("Tiempo de entrenamiento"), t("Gana en")]
-        main_rows = [i for i, nme in enumerate(order) if nme == total_w]
-        st.html(ui.table(heads, rows, num=tuple(range(2, 2 + len(cols))), min_w=1100, main_rows=main_rows))
-        st.html(f'<p class="syncnote">{esc(t("Precisión de validación (más alto es mejor). Subrayado = el mejor de esa columna. Los modelos con pocas ventanas no entran. Esta precisión es optimista porque el ganador se elige mirando los mismos meses; la prueba de abajo es la confiable."))}</p>')
-
-        # ganador por calibre
-        st.html(ui.h2(t("Ganador por calibre")))
-        wrows = []
-        for c in cols:
-            col = mx[c].dropna().sort_values()
-            if len(col) < 2:
+            e_ = mx.loc[name, c]
+            if not np.isfinite(e_):
+                cells.append("—")
                 continue
-            wrows.append([Raw(f"<b>{esc(t('Total') if c == 'Total' else ui.cal_label(c))}</b>"), t(col.index[0]), t(E.TYPE_OF.get(col.index[0], "")), f"{max(0, 100 - col.iloc[0]):.1f}%",
-                          t(col.index[1]), f"{col.iloc[1] - col.iloc[0]:+.1f} {t('pts')}"])
-        st.html(ui.table([t("Selección"), t("Ganador"), t("Tipo"), t("Precisión"), t("Segundo lugar"), t("Ventaja")], wrows, num=(3, 5)))
+            p_ = f"{max(0, 100 - e_):.1f}%"
+            if win.get(c) == name:
+                cells.append(Raw(f'<span class="win">{p_}</span>'))
+                won.append(c)
+            else:
+                cells.append(p_)
+        cells.append(lab_time(secs.get(name, np.nan) if name not in E.ML_FAMILY else ml_time_of(ml, name)))
+        cells.append(", ".join(ui.cal_label(c) if c.isdigit() else t(c) for c in won) or "—")
+        rows.append(cells)
+    heads = [t("Modelo"), t("Tipo")] + [t("Total") if c == "Total" else ui.cal_label(c) for c in cols] + [t("Tiempo de entrenamiento"), t("Gana en")]
+    main_rows = [i for i, nme in enumerate(order) if nme == total_w]
+    st.html(ui.table(heads, rows, num=tuple(range(2, 2 + len(cols))), min_w=1100, main_rows=main_rows))
+    st.html(f'<p class="syncnote">{esc(t("Precisión de validación (más alto es mejor). Subrayado = el mejor de esa columna. Los modelos con pocas ventanas no entran. Esta precisión es optimista porque el ganador se elige mirando los mismos meses; la prueba de abajo es la confiable."))}</p>')
 
-        # configuración elegida de cada familia
-        with st.expander(t("Configuración elegida de cada modelo de machine learning")):
-            fam_rows = [[t(E.ML), spec_label(ml["spec"]), f"{ml['honest_err']:.1f}%", lab_time(ml["time"])]]
-            for fam, r in (ml.get("extra") or {}).items():
-                fam_rows.append([t(MLm.MODEL_NAMES[fam]), spec_label(r["spec"]), f"{r['honest_err']:.1f}%", lab_time(r["time"])])
-            st.html(ui.table([t("Modelo"), t("Configuración"), t("Error de validación"), t("Tiempo de entrenamiento")], fam_rows, num=(2, 3)))
-            st.html(f'<p class="syncnote">{esc(t("Para cada ventana se usa la configuración que se habría elegido sin ver esa ventana. El tiempo incluye afinar, validar y entrenar el modelo final."))}</p>')
-        out_of_sample_block()
-        similar_block(m)
+    # ganador por calibre
+    st.html(ui.h2(t("Ganador por calibre")))
+    wrows = []
+    for c in cols:
+        col = mx[c].dropna().sort_values()
+        if len(col) < 2:
+            continue
+        wrows.append([Raw(f"<b>{esc(t('Total') if c == 'Total' else ui.cal_label(c))}</b>"), t(col.index[0]), t(E.TYPE_OF.get(col.index[0], "")), f"{max(0, 100 - col.iloc[0]):.1f}%",
+                      t(col.index[1]), f"{col.iloc[1] - col.iloc[0]:+.1f} {t('pts')}"])
+    st.html(ui.table([t("Selección"), t("Ganador"), t("Tipo"), t("Precisión"), t("Segundo lugar"), t("Ventaja")], wrows, num=(3, 5)))
+
+    # configuración elegida de cada familia
+    with st.expander(t("Configuración elegida de cada modelo de machine learning")):
+        fam_rows = [[t(E.ML), spec_label(ml["spec"]), f"{ml['honest_err']:.1f}%", lab_time(ml["time"])]]
+        for fam, r in (ml.get("extra") or {}).items():
+            fam_rows.append([t(MLm.MODEL_NAMES[fam]), spec_label(r["spec"]), f"{r['honest_err']:.1f}%", lab_time(r["time"])])
+        st.html(ui.table([t("Modelo"), t("Configuración"), t("Error de validación"), t("Tiempo de entrenamiento")], fam_rows, num=(2, 3)))
+        st.html(f'<p class="syncnote">{esc(t("Para cada ventana se usa la configuración que se habría elegido sin ver esa ventana. El tiempo incluye afinar, validar y entrenar el modelo final."))}</p>')
+    out_of_sample_block()
+    similar_block(m)
 
 
 def ml_time_of(ml, name) -> float:
@@ -3117,40 +3119,45 @@ def source_status_block():
 
 def section_noticias():
     ensure_news()
-    left, right = layout()
     topics, rels = list(NEWS.TOPICS), ["Alta", "Media", "Baja"]
-    with left:
-        st.button(t("Actualizar"), key="news_refresh", type="primary", width="stretch", on_click=lambda: news_background(force=True))
+    _nf1, _nf2, _nf3, _nf4 = st.columns([3, 2, 2, 1], gap="medium")
+    with _nf1:
         wid(st.pills, t("Tema"), "chips_news_topic", topics, options=topics, selection_mode="multi", format_func=t)
+    with _nf2:
         wid(st.pills, t("Relevancia"), "chips_news_rel", ["Alta", "Media"], options=rels, selection_mode="multi", format_func=t)
         days = wid(st.radio, t("Fecha"), "seg_news_days", 30, options=[7, 30, 60], horizontal=True, format_func=lambda d: t("{n} días", n=d))
+    with _nf3:
         sts = wid(st.pills, t("Estado"), "chips_news_status", ["nuevo", "relevante", "revisado"], options=list(NEWS.STATUSES), selection_mode="multi", format_func=t)
         q = wid(st.text_input, t("Buscar"), "news_q", "")
-        st.caption(t("Se actualiza sola cada 30 minutos mientras la app está abierta. Solo se guardan titular, fuente, fecha, enlace y un resumen corto."))
+    with _nf4:
+        st.button(t("Actualizar"), key="news_refresh", type="primary", use_container_width=True, on_click=lambda: news_background(force=True))
+        st.caption(t("Se actualiza sola cada 30 minutos."))
     sel_t, sel_r, sel_s = store().get("chips_news_topic") or topics, store().get("chips_news_rel") or rels, store().get("chips_news_status") or list(NEWS.STATUSES)
     rows = NEWS.load(days=days, topics=sel_t, relevance=sel_r, statuses=sel_s, text=q.strip())
     rows.sort(key=lambda r: (REL_RANK[r["relevance"]], -dt.datetime.fromisoformat(r["published"]).timestamp()))
     allr = NEWS.load(days=days, statuses=["nuevo", "relevante", "revisado"])
-    with right:
-        n_alta = sum(1 for r in allr if r["relevance"] == "Alta")
-        st.html(ui.headline(t("Noticias y regulación: {n} en los últimos {d} días, {a} de relevancia alta.", n=len(allr), d=days, a=n_alta),
-                            t("Fuentes: Federal Register (oficial de EE. UU.), Google News en español e inglés y GDELT cuando responde. El DOF no tiene un feed accesible, así que sus publicaciones se buscan a través de las noticias.")))
-        st.html(ui.kpis([(str(sum(1 for r in allr if r["relevance"] == "Alta")), t("Relevancia alta")), (str(sum(1 for r in allr if r["relevance"] == "Media")), t("Relevancia media")),
-                         (str(len([r for r in allr if r["status"] == "nuevo"])), t("Sin revisar")), (str(len([r for r in allr if r["provider"] == "federal_register"])), t("Oficiales (Federal Register)"))]))
-        source_status_block()
-        shown = int(st.session_state.get("news_shown", 25))
-        if not rows:
-            st.html(f'<p class="hint">{esc(t("Ninguna noticia coincide con los filtros."))}</p>')
-        for r in rows[:shown]:
-            st.html(news_card_html(r) + (f'<div class="alertbar" style="margin-top:6px"><b>{esc(t("Qué hacer"))}:</b> {esc(t(r["action"]["text"]))}</div>' if r["action"] and r["relevance"] != "Baja" else ""))
-            item_buttons(r, "nw")
-        if len(rows) > shown:
-            st.button(t("Mostrar más ({n} restantes)", n=len(rows) - shown), key="news_more", on_click=lambda: st.session_state.__setitem__("news_shown", shown + 25))
-        if adv():
-            with st.expander(t("Bitácora de cambios")):
-                lg = NEWS.changelog(50)
-                st.html(ui.table([t("Fecha"), t("Quién"), t("Acción"), t("Detalle")], [[x["ts"].replace("T", " "), x["who"], t(x["action"]), x["detail"]] for x in lg], min_w=700) if lg else
-                        f'<p class="hint">{esc(t("Sin cambios registrados."))}</p>')
+    n_alta = sum(1 for r in allr if r["relevance"] == "Alta")
+    st.html(ui.section_header_html(
+        eyebrow=t("NOTICIAS · {n} EN {d} DÍAS · {a} DE RELEVANCIA ALTA", n=len(allr), d=days, a=n_alta),
+        headline=t("Noticias y regulación: {n} en los últimos {d} días, {a} de relevancia alta.", n=len(allr), d=days, a=n_alta),
+        sub=t("Fuentes: Federal Register (oficial de EE. UU.), Google News en español e inglés y GDELT cuando responde. El DOF no tiene un feed accesible, así que sus publicaciones se buscan a través de las noticias."),
+    ))
+    st.html(ui.kpis([(str(sum(1 for r in allr if r["relevance"] == "Alta")), t("Relevancia alta")), (str(sum(1 for r in allr if r["relevance"] == "Media")), t("Relevancia media")),
+                     (str(len([r for r in allr if r["status"] == "nuevo"])), t("Sin revisar")), (str(len([r for r in allr if r["provider"] == "federal_register"])), t("Oficiales (Federal Register)"))]))
+    source_status_block()
+    shown = int(st.session_state.get("news_shown", 25))
+    if not rows:
+        st.html(f'<p class="hint">{esc(t("Ninguna noticia coincide con los filtros."))}</p>')
+    for r in rows[:shown]:
+        st.html(news_card_html(r) + (f'<div class="alertbar" style="margin-top:6px"><b>{esc(t("Qué hacer"))}:</b> {esc(t(r["action"]["text"]))}</div>' if r["action"] and r["relevance"] != "Baja" else ""))
+        item_buttons(r, "nw")
+    if len(rows) > shown:
+        st.button(t("Mostrar más ({n} restantes)", n=len(rows) - shown), key="news_more", on_click=lambda: st.session_state.__setitem__("news_shown", shown + 25))
+    if adv():
+        with st.expander(t("Bitácora de cambios")):
+            lg = NEWS.changelog(50)
+            st.html(ui.table([t("Fecha"), t("Quién"), t("Acción"), t("Detalle")], [[x["ts"].replace("T", " "), x["who"], t(x["action"]), x["detail"]] for x in lg], min_w=700) if lg else
+                    f'<p class="hint">{esc(t("Sin cambios registrados."))}</p>')
 
 
 # ================================================================== CRM, equipo, alertas e Inicio (Fase 6E)
@@ -5351,62 +5358,71 @@ def _vol_src(s: str) -> str:
 
 def section_riesgo():
     h = horizon_default()
-    left, right = layout()
-    with left:
+    _rk1, _rk2, _rk3 = st.columns(3, gap="medium")
+    with _rk1:
         h = wid(st.radio, t("Horizonte"), "seg_h", 6, options=[3, 6, 12], horizontal=True, format_func=lambda x: t("{n} meses", n=x))
+    with _rk2:
         n = wid(st.radio, t("Simulaciones"), "rk_n", 5000, options=[2000, 5000, 10000], horizontal=True, format_func=lambda x: f"{x:,}")
-        thr = wid(st.number_input, t("Umbral de margen (millones de MXN)"), "rk_thr", 0.0, step=5.0)
-        st.html(ui.group_title(t("Arancel (probabilidad de cada caso)")))
-        wid(st.slider, t("Exención (0%)"), "rk_p0", 20, min_value=0, max_value=100, step=5, format="%d%%")
-        wid(st.slider, t("Sigue el vigente"), "rk_p1", 60, min_value=0, max_value=100, step=5, format="%d%%")
-        wid(st.slider, t("Sube 10 puntos"), "rk_p2", 20, min_value=0, max_value=100, step=5, format="%d%%")
-        st.caption(t("Las tres se ajustan a 100%. Son supuestos tuyos; sin ventas de exportación definidas no mueven el margen."))
-        st.html(ui.group_title(t("Compra de metal")))
-        wid(st.slider, t("Meses que cubre la compra"), "rk_cov", 3, min_value=1, max_value=6, step=1)
-        wid(st.slider, t("Recargo por comprar de urgencia"), "rk_rush", 8, min_value=0, max_value=30, step=1, format="%d%%")
-        wid(st.slider, t("Costo anual de mantener inventario"), "pl_hold", 25, min_value=5, max_value=50, step=1, format="%d%%")
-        st.html(ui.group_title(t("Cobertura")))
-        wid(st.slider, t("Compras fijadas al precio de hoy"), "rk_hedge", 50, min_value=0, max_value=100, step=10, format="%d%%")
-        wid(st.slider, t("Meses cubiertos"), "rk_hm", 6, min_value=1, max_value=12, step=1)
-        wid(st.number_input, t("Costo de la cobertura (% del precio fijado)"), "rk_fee", 0.0, min_value=0.0, max_value=10.0, step=0.1)
-    with right:
-        ctx = risk_inputs(h)
-        if ctx is None:
-            st.html(f'<p class="hint">{esc(t("No hay un plan que simular con esta selección."))}</p>')
-            return
-        sm = risk_summary(h, int(n))
-        s, o, setup, vol, cal = sm["s"], sm["o"], ctx["setup"], ctx["vol"], ctx["cal"]
-        thr_m = thr * 1e6
-        st.html(ui.headline(t("En {n} simulaciones, el margen de {h} meses queda entre {a} y {b} (P5 a P95).", n=f"{int(n):,}", h=h, a=ui.mxn(s["p5"]), b=ui.mxn(s["p95"])),
-                            t("Hay {p}% de probabilidad de que el margen quede bajo {u}. Combina la demanda (errores de la validación cruzada), el cobre, el aluminio y el tipo de cambio (volatilidad histórica) y el arancel. Los precios y costos son ilustrativos.",
-                              p=f"{s['prob_below'] * 100:.0f}", u=ui.mxn(thr_m))))
-        base = RK.deterministic(setup)
-        st.html(ui.kpis([(ui.mxn(s["mean"]), t("Margen esperado"), t("plan sin riesgo: {x}", x=ui.mxn(base["margin"]))), (ui.mxn(s["p5"]), t("Margen en el peor 5% (P5)")),
-                         (ui.mxn(s["at_risk"]), t("Margen en riesgo (esperado menos P5)")), (f"{s['prob_below'] * 100:.0f}%", t("Probabilidad de margen bajo el umbral"), ui.mxn(thr_m))]))
-        c = st.columns(2, gap="large")
-        with c[0]:
-            st.html(ui.h2(t("Distribución del margen"), t("Millones de MXN. Rayas: P5, esperado y P95.")))
-            st.plotly_chart(ui.hist_fig(o["margin"] / 1e6, [(s["p5"] / 1e6, "P5", ui.FG), (s["mean"] / 1e6, t("Esperado"), ui.RED), (s["p95"] / 1e6, "P95", ui.MUTED)], height=300),
-                            key="rk_hist_margin", width="stretch", theme=None, config={"displayModeBar": False})
-        with c[1]:
-            sr = RK.summarize(o["revenue"])
-            st.html(ui.h2(t("Distribución del ingreso"), t("Millones de MXN. P5 {a}, esperado {b}, P95 {c}.", a=f"{sr['p5'] / 1e6:,.0f}", b=f"{sr['mean'] / 1e6:,.0f}", c=f"{sr['p95'] / 1e6:,.0f}")))
-            st.plotly_chart(ui.hist_fig(o["revenue"] / 1e6, [(sr["p5"] / 1e6, "P5", ui.FG), (sr["mean"] / 1e6, t("Esperado"), ui.RED), (sr["p95"] / 1e6, "P95", ui.MUTED)], height=300),
-                            key="rk_hist_revenue", width="stretch", theme=None, config={"displayModeBar": False})
-        st.html(f'<p class="syncnote">{esc(t("Margen en riesgo = margen esperado menos el percentil 5: lo que se puede perder en un mal escenario de cada 20. En el peor 5% el margen promedia {x}.", x=ui.mxn(s["cvar"])))}</p>')
-        # volatilidad y supuestos
-        with st.expander(t("Supuestos de la simulación")):
-            # Support both nested {sigma: {cu:…}} and legacy flat {cu_vol:…} shapes
-            _sig = vol.get("sigma") or {"cu": vol.get("cu_vol", 0.0), "al": vol.get("al_vol", 0.0), "fx": vol.get("fx_vol", 0.0)}
-            _src = vol.get("source") or {"cu": vol.get("src", "sin datos"), "al": vol.get("src", "sin datos"), "fx": vol.get("src", "sin datos")}
-            rows = [[t("Cobre"), f"{_sig['cu'] * 100:.1f}%", _vol_src(_src["cu"])], [t("Aluminio"), f"{_sig['al'] * 100:.1f}%", _vol_src(_src["al"])], ["USD/MXN", f"{_sig['fx'] * 100:.1f}%", _vol_src(_src["fx"])]]
-            st.html(ui.table([t("Serie"), t("Volatilidad mensual"), t("Origen")], rows, num=(1,)))
-            st.html(f'<p class="syncnote">{esc(t("Los precios siguen una caminata aleatoria lognormal alrededor del camino de Metales (sin tendencia propia), con la correlación histórica entre ellos. La demanda es el pronóstico más errores tomados al azar de la validación cruzada de todos los calibres, ensanchados {c}x para que en validación {v}% de los meses reales caiga dentro de P10 a P90 (sin ensanchar: {r}%). Con tan pocas ventanas, las colas son una aproximación.", c=f"{cal['inflate']:.1f}", v=f"{cal.get('coverage', 0):.0f}", r=f"{cal.get('coverage_raw', cal.get('coverage', 0)):.0f}"))}</p>')
-            if not any(setup.rows["is_exp"]):
-                st.html(f'<p class="syncnote">{esc(t("Tus datos no tienen ventas de exportación definidas, así que el arancel no afecta esta simulación."))}</p>')
-        risk_bands_block(ctx, int(n))
-        risk_purchase_block(ctx, o)
-        risk_hedge_block(ctx, sm)
+    with _rk3:
+        thr = wid(st.number_input, t("Umbral de margen (millones MXN)"), "rk_thr", 0.0, step=5.0)
+    with st.expander(t("Supuestos: arancel, compra y cobertura"), expanded=True):
+        _ec1, _ec2, _ec3 = st.columns(3, gap="medium")
+        with _ec1:
+            st.html(ui.group_title(t("Arancel (probabilidad de cada caso)")))
+            wid(st.slider, t("Exención (0%)"), "rk_p0", 20, min_value=0, max_value=100, step=5, format="%d%%")
+            wid(st.slider, t("Sigue el vigente"), "rk_p1", 60, min_value=0, max_value=100, step=5, format="%d%%")
+            wid(st.slider, t("Sube 10 puntos"), "rk_p2", 20, min_value=0, max_value=100, step=5, format="%d%%")
+            st.caption(t("Las tres se ajustan a 100%. Son supuestos tuyos; sin ventas de exportación definidas no mueven el margen."))
+        with _ec2:
+            st.html(ui.group_title(t("Compra de metal")))
+            wid(st.slider, t("Meses que cubre la compra"), "rk_cov", 3, min_value=1, max_value=6, step=1)
+            wid(st.slider, t("Recargo por comprar de urgencia"), "rk_rush", 8, min_value=0, max_value=30, step=1, format="%d%%")
+            wid(st.slider, t("Costo anual de mantener inventario"), "pl_hold", 25, min_value=5, max_value=50, step=1, format="%d%%")
+        with _ec3:
+            st.html(ui.group_title(t("Cobertura")))
+            wid(st.slider, t("Compras fijadas al precio de hoy"), "rk_hedge", 50, min_value=0, max_value=100, step=10, format="%d%%")
+            wid(st.slider, t("Meses cubiertos"), "rk_hm", 6, min_value=1, max_value=12, step=1)
+            wid(st.number_input, t("Costo de la cobertura (% del precio fijado)"), "rk_fee", 0.0, min_value=0.0, max_value=10.0, step=0.1)
+    ctx = risk_inputs(h)
+    if ctx is None:
+        st.html(f'<p class="hint">{esc(t("No hay un plan que simular con esta selección."))}</p>')
+        return
+    sm = risk_summary(h, int(n))
+    s, o, setup, vol, cal = sm["s"], sm["o"], ctx["setup"], ctx["vol"], ctx["cal"]
+    thr_m = thr * 1e6
+    st.html(ui.section_header_html(
+        eyebrow=t("RIESGO Y COBERTURA · {n} SIMULACIONES", n=f"{int(n):,}"),
+        headline=t("En {n} simulaciones, el margen de {h} meses queda entre {a} y {b} (P5 a P95).", n=f"{int(n):,}", h=h, a=ui.mxn(s["p5"]), b=ui.mxn(s["p95"])),
+        sub=t("Hay {p}% de probabilidad de que el margen quede bajo {u}. Combina la demanda (errores de la validación cruzada), el cobre, el aluminio y el tipo de cambio (volatilidad histórica) y el arancel. Los precios y costos son ilustrativos.",
+              p=f"{s['prob_below'] * 100:.0f}", u=ui.mxn(thr_m)),
+    ))
+    base = RK.deterministic(setup)
+    st.html(ui.kpis([(ui.mxn(s["mean"]), t("Margen esperado"), t("plan sin riesgo: {x}", x=ui.mxn(base["margin"]))), (ui.mxn(s["p5"]), t("Margen en el peor 5% (P5)")),
+                     (ui.mxn(s["at_risk"]), t("Margen en riesgo (esperado menos P5)")), (f"{s['prob_below'] * 100:.0f}%", t("Probabilidad de margen bajo el umbral"), ui.mxn(thr_m))]))
+    c = st.columns(2, gap="large")
+    with c[0]:
+        st.html(ui.h2(t("Distribución del margen"), t("Millones de MXN. Rayas: P5, esperado y P95.")))
+        st.plotly_chart(ui.hist_fig(o["margin"] / 1e6, [(s["p5"] / 1e6, "P5", ui.FG), (s["mean"] / 1e6, t("Esperado"), ui.RED), (s["p95"] / 1e6, "P95", ui.MUTED)], height=300),
+                        key="rk_hist_margin", width="stretch", theme=None, config={"displayModeBar": False})
+    with c[1]:
+        sr = RK.summarize(o["revenue"])
+        st.html(ui.h2(t("Distribución del ingreso"), t("Millones de MXN. P5 {a}, esperado {b}, P95 {c}.", a=f"{sr['p5'] / 1e6:,.0f}", b=f"{sr['mean'] / 1e6:,.0f}", c=f"{sr['p95'] / 1e6:,.0f}")))
+        st.plotly_chart(ui.hist_fig(o["revenue"] / 1e6, [(sr["p5"] / 1e6, "P5", ui.FG), (sr["mean"] / 1e6, t("Esperado"), ui.RED), (sr["p95"] / 1e6, "P95", ui.MUTED)], height=300),
+                        key="rk_hist_revenue", width="stretch", theme=None, config={"displayModeBar": False})
+    st.html(f'<p class="syncnote">{esc(t("Margen en riesgo = margen esperado menos el percentil 5: lo que se puede perder en un mal escenario de cada 20. En el peor 5% el margen promedia {x}.", x=ui.mxn(s["cvar"])))}</p>')
+    # volatilidad y supuestos
+    with st.expander(t("Supuestos de la simulación")):
+        # Support both nested {sigma: {cu:…}} and legacy flat {cu_vol:…} shapes
+        _sig = vol.get("sigma") or {"cu": vol.get("cu_vol", 0.0), "al": vol.get("al_vol", 0.0), "fx": vol.get("fx_vol", 0.0)}
+        _src = vol.get("source") or {"cu": vol.get("src", "sin datos"), "al": vol.get("src", "sin datos"), "fx": vol.get("src", "sin datos")}
+        rows = [[t("Cobre"), f"{_sig['cu'] * 100:.1f}%", _vol_src(_src["cu"])], [t("Aluminio"), f"{_sig['al'] * 100:.1f}%", _vol_src(_src["al"])], ["USD/MXN", f"{_sig['fx'] * 100:.1f}%", _vol_src(_src["fx"])]]
+        st.html(ui.table([t("Serie"), t("Volatilidad mensual"), t("Origen")], rows, num=(1,)))
+        st.html(f'<p class="syncnote">{esc(t("Los precios siguen una caminata aleatoria lognormal alrededor del camino de Metales (sin tendencia propia), con la correlación histórica entre ellos. La demanda es el pronóstico más errores tomados al azar de la validación cruzada de todos los calibres, ensanchados {c}x para que en validación {v}% de los meses reales caiga dentro de P10 a P90 (sin ensanchar: {r}%). Con tan pocas ventanas, las colas son una aproximación.", c=f"{cal['inflate']:.1f}", v=f"{cal.get('coverage', 0):.0f}", r=f"{cal.get('coverage_raw', cal.get('coverage', 0)):.0f}"))}</p>')
+        if not any(setup.rows["is_exp"]):
+            st.html(f'<p class="syncnote">{esc(t("Tus datos no tienen ventas de exportación definidas, así que el arancel no afecta esta simulación."))}</p>')
+    risk_bands_block(ctx, int(n))
+    risk_purchase_block(ctx, o)
+    risk_hedge_block(ctx, sm)
 
 
 def risk_bands_block(ctx, n: int):
