@@ -1172,3 +1172,14 @@ def quien_compra_tile_html(customers: list) -> Raw:
         f'{body}'
         f'</div>'
     )
+
+
+def section_header_html(eyebrow: str, headline: str, sub: str) -> Raw:
+    """Full-width section header tile for Pronóstico and other main pages."""
+    return Raw(
+        f'<div class="vk-tile" style="padding:20px 24px 18px;margin-bottom:4px">'
+        f'<span class="vk-eyebrow" style="display:block;margin-bottom:8px">{esc(eyebrow)}</span>'
+        f'<div class="vk-headline" style="margin:0 0 6px">{esc(headline)}</div>'
+        f'<div style="font-size:13px;color:{MUTED};line-height:1.55">{esc(sub)}</div>'
+        f'</div>'
+    )

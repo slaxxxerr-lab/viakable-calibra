@@ -1510,18 +1510,19 @@ def section_pronostico():
     prices, mult, sig, w = get_prices(), get_mult(), get_sig(), get_w()
     A = adv()
     u = ui.UNIT
-    left, right = layout()
-    with left:
+    # ── controls (full-width, compact) ───────────────────────────────────────
+    with st.container(key="pf_controls"):
         units, market, horizon, color_filter = selection_controls(prep)
         meas = wid(st.radio, t("Ver pronóstico en"), "seg_meas", "Toneladas", options=list(MEAS), horizontal=True, format_func=t)
-        measure = MEAS[meas]
-        allg = tuple(g for x in units for g in x)
-        m_view = m if color_filter is None else m[m["color"].isin(color_filter)]
-        bt = cached_bt(m_view, allg, market, measure, prices, ml)
-        _lap("cached_bt (selección de método / backtest)")
-        method, mode = E.AUTO, "sum"
-        best_name = E.best_method(bt) if len(bt) else E.AUTO
-        if A:
+    measure = MEAS[meas]
+    allg = tuple(g for x in units for g in x)
+    m_view = m if color_filter is None else m[m["color"].isin(color_filter)]
+    bt = cached_bt(m_view, allg, market, measure, prices, ml)
+    _lap("cached_bt (selección de método / backtest)")
+    method, mode = E.AUTO, "sum"
+    best_name = E.best_method(bt) if len(bt) else E.AUTO
+    if A:
+        with st.expander(t("Método y señales"), expanded=True):
             elig = list(bt.loc[bt["Elegible"], "Método"])
             top = elig[:3]
             rest = [x for x in bt["Método"] if x not in top] + [E.SIGNAL]
@@ -1540,7 +1541,7 @@ def section_pronostico():
             st.caption(t("Con 0% la base solo usa los últimos tres meses."))
             st.pills(t("Escenario de mercado"), list(SIGNAL_PRESETS), selection_mode="single", key="chips_preset", format_func=t,
                      on_change=lambda: apply_preset(st.session_state["chips_preset"]) if st.session_state.get("chips_preset") else None)
-        export_slot = st.container()
+    export_slot = st.container()
 
     pr = cached_project(m_view, tuple(tuple(x) for x in units), market, horizon, method, measure, mode, mult, sig, w, prices, ml, get_crm(None, measure, prices), apply_signals_on())
     _lap("cached_project (pronóstico principal)")
@@ -1557,146 +1558,151 @@ def section_pronostico():
     main_name = t(MODE_LBL["sum"]) if sum_mode else t(pr.method)
     cls = M.demand_class(hist.values)[0]
 
-    with right:
-        scope = scope_text(units, market, len(prep.gauges))
-        if color_filter:
-            scope += " · " + ", ".join(sorted(color_filter))
-        head = (t("Esperamos ventas por {v} {scope} en los próximos {h} meses con el método {m}.", v=fv(fc.sum()), scope=scope, h=horizon, m=main_name) if money
-                else t("Esperamos {v} {scope} en los próximos {h} meses con el método {m}.", v=fv(fc.sum()), scope=scope, h=horizon, m=main_name))
-        k = ui.acc_key(auto.error)
-        sub = (t("Suma de calibres: el total suma cada calibre con su método más certero.") if sum_mode
-               else t("{m} es el método más certero aquí: {p}% de precisión ({a}).", m=t(auto.method), p=f"{max(0, 100 - auto.error):.1f}", a=ui.acc_txt(k).lower()))
-        if method not in (E.AUTO, auto.method) and not sum_mode:
-            sub += " " + t("Estás viendo {m} como método principal.", m=t(method))
-        if mult != 1.0:
-            base_pr = cached_project(m_view, tuple(tuple(x) for x in units), market, horizon, method, measure, mode, 1.0, sig, w, prices, ml, get_crm(None, measure, prices), apply_signals_on())
-            d_t = fc.sum() - base_pr.fc.sum()
-            tf = get_tariff()
-            sub += " " + t("Con arancel de {s}% en lugar de {c}%, la exportación a EE. UU. cambia {x}% y el total queda {d} {dir}.",
-                           s=f"{tf['scenario']:.0f}", c=f"{tf['current']:.0f}", x=f"{(mult - 1) * 100:+.1f}", d=fv(abs(d_t)),
-                           dir=t("arriba") if d_t >= 0 else t("abajo"))
-        if yoy is not None:
-            sub += " " + t("Queda {p}% {dir} del mismo periodo del año anterior.", p=f"{abs(yoy):.1f}", dir=t("arriba") if yoy >= 0 else t("abajo"))
+    scope = scope_text(units, market, len(prep.gauges))
+    if color_filter:
+        scope += " · " + ", ".join(sorted(color_filter))
+    head = (t("Esperamos ventas por {v} {scope} en los próximos {h} meses con el método {m}.", v=fv(fc.sum()), scope=scope, h=horizon, m=main_name) if money
+            else t("Esperamos {v} {scope} en los próximos {h} meses con el método {m}.", v=fv(fc.sum()), scope=scope, h=horizon, m=main_name))
+    k = ui.acc_key(auto.error)
+    sub = (t("Suma de calibres: el total suma cada calibre con su método más certero.") if sum_mode
+           else t("{m} es el método más certero aquí: {p}% de precisión ({a}).", m=t(auto.method), p=f"{max(0, 100 - auto.error):.1f}", a=ui.acc_txt(k).lower()))
+    if method not in (E.AUTO, auto.method) and not sum_mode:
+        sub += " " + t("Estás viendo {m} como método principal.", m=t(method))
+    if mult != 1.0:
+        base_pr = cached_project(m_view, tuple(tuple(x) for x in units), market, horizon, method, measure, mode, 1.0, sig, w, prices, ml, get_crm(None, measure, prices), apply_signals_on())
+        d_t = fc.sum() - base_pr.fc.sum()
+        tf = get_tariff()
+        sub += " " + t("Con arancel de {s}% en lugar de {c}%, la exportación a EE. UU. cambia {x}% y el total queda {d} {dir}.",
+                       s=f"{tf['scenario']:.0f}", c=f"{tf['current']:.0f}", x=f"{(mult - 1) * 100:+.1f}", d=fv(abs(d_t)),
+                       dir=t("arriba") if d_t >= 0 else t("abajo"))
+    if yoy is not None:
+        sub += " " + t("Queda {p}% {dir} del mismo periodo del año anterior.", p=f"{abs(yoy):.1f}", dir=t("arriba") if yoy >= 0 else t("abajo"))
 
-        # ── Row 1: accuracy gauge tiles ──────────────────────
-        _precision = max(0.0, 100.0 - pr.error) if np.isfinite(pr.error) else 0.0
-        _eff_m = best_name if method == E.AUTO else method
-        _sesgo = 0.0
-        if not bt.empty and _eff_m in bt["Método"].values:
-            _sr = bt.loc[bt["Método"] == _eff_m, "Sesgo %"]
-            if not _sr.empty and np.isfinite(float(_sr.iloc[0])):
-                _sesgo = float(_sr.iloc[0])
-        _yoy_v = float(yoy) if yoy is not None and np.isfinite(float(yoy)) else 0.0
+    # ── section header ───────────────────────────────────
+    st.html(ui.section_header_html(
+        eyebrow=t("PRONÓSTICO · {m}", m=t(main_name).upper()),
+        headline=head,
+        sub=sub,
+    ))
+    st.html(f'<p class="hint" style="margin:-10px 0 16px">{ui.esc(t("Tipo de demanda:"))} {ui.dclass_html(cls)} · {ui.esc(t(DCLASS_NOTE.get(cls, "")))}</p>')
 
-        gc1, gc2, gc3, gc4 = st.columns(4)
-        with gc1:
-            _c = "#22c55e" if _precision >= 85 else ("#f59e0b" if _precision >= 70 else ui.RED)
-            st.html(ui.gauge_tile_html(t("Precisión"), f"{_precision:.1f}%", _precision / 100.0, _c))
-        with gc2:
-            _c = "#22c55e" if abs(_sesgo) < 10 else ("#f59e0b" if abs(_sesgo) < 20 else ui.RED)
-            _p = max(0.0, min(1.0, (50.0 - abs(_sesgo)) / 50.0))
-            st.html(ui.gauge_tile_html(t("Sesgo"), f"{_sesgo:+.1f}%", _p, _c, t("0% = sin sesgo")))
-        with gc3:
-            st.html(ui.gauge_tile_html(t("Cobertura 80%"), "≈80%", 0.80, "#22c55e", t("diseñado para 80%")))
-        with gc4:
-            _c = "#22c55e" if _yoy_v >= 0 else ui.RED
-            _p = max(0.0, min(1.0, (_yoy_v + 50.0) / 100.0))
-            _arr = "▲ " if _yoy_v >= 0 else "▼ "
-            st.html(ui.gauge_tile_html(t("Cambio YoY"), f"{_arr}{abs(_yoy_v):.1f}%", _p, _c))
+    # ── Row 1: accuracy gauge tiles ──────────────────────
+    _precision = max(0.0, 100.0 - pr.error) if np.isfinite(pr.error) else 0.0
+    _eff_m = best_name if method == E.AUTO else method
+    _sesgo = 0.0
+    if not bt.empty and _eff_m in bt["Método"].values:
+        _sr = bt.loc[bt["Método"] == _eff_m, "Sesgo %"]
+        if not _sr.empty and np.isfinite(float(_sr.iloc[0])):
+            _sesgo = float(_sr.iloc[0])
+    _yoy_v = float(yoy) if yoy is not None and np.isfinite(float(yoy)) else 0.0
 
-        # ── Whatif / levers ──────────────────────────────────
-        edits_note()
-        whatif_panel(prep)
-        levers = changed_levers()
-        if levers:
-            bs = neutral(store())
-            bpr = cached_project(m_view, tuple(tuple(x) for x in units), market, horizon, method, measure, mode, get_mult(bs), get_sig(bs), get_w(bs), get_prices(bs), ml,
-                                 get_crm(bs, measure, get_prices(bs)), apply_signals_on(bs))
-            whatif_strip([delta_chip(t("Pronóstico {h} meses", h=horizon), float(fc.sum()), float(bpr.fc.sum()), fv)], levers)
-        else:
-            whatif_strip([], [])
+    gc1, gc2, gc3, gc4 = st.columns(4)
+    with gc1:
+        _c = "#22c55e" if _precision >= 85 else ("#f59e0b" if _precision >= 70 else ui.RED)
+        st.html(ui.gauge_tile_html(t("Precisión"), f"{_precision:.1f}%", _precision / 100.0, _c))
+    with gc2:
+        _c = "#22c55e" if abs(_sesgo) < 10 else ("#f59e0b" if abs(_sesgo) < 20 else ui.RED)
+        _p = max(0.0, min(1.0, (50.0 - abs(_sesgo)) / 50.0))
+        st.html(ui.gauge_tile_html(t("Sesgo"), f"{_sesgo:+.1f}%", _p, _c, t("0% = sin sesgo")))
+    with gc3:
+        st.html(ui.gauge_tile_html(t("Cobertura 80%"), "≈80%", 0.80, "#22c55e", t("diseñado para 80%")))
+    with gc4:
+        _c = "#22c55e" if _yoy_v >= 0 else ui.RED
+        _p = max(0.0, min(1.0, (_yoy_v + 50.0) / 100.0))
+        _arr = "▲ " if _yoy_v >= 0 else "▼ "
+        st.html(ui.gauge_tile_html(t("Cambio YoY"), f"{_arr}{abs(_yoy_v):.1f}%", _p, _c))
 
-        # ── Headline + KPIs ──────────────────────────────────
-        with st.container(key="result"):
-            st.html(ui.headline(head, sub))
-            st.html(f'<p class="hint" style="margin:-14px 0 18px">{esc(t("Tipo de demanda:"))} {ui.dclass_html(cls)} · {esc(t(DCLASS_NOTE.get(cls, "")))}</p>')
-            acc = ui.acc_html(pr.error, short=True)
-            st.html(ui.kpis([(fv(fc[0]), t("Venta pronosticada {mes} ({u})", mes=mes_largo(pr.index[0]), u=unit)),
-                             (fv(fc.sum()), t("Venta total {h} meses ({u})", h=horizon, u=unit)),
-                             (Raw(f"{max(0, 100 - pr.error):.1f}%"), t("Precisión en prueba histórica"), acc),
-                             (f"{fv(lo[0])} – {fv(hi[0])}", t("Rango del 80% del próximo mes"))], cols=4))
+    # ── Whatif / levers ──────────────────────────────────
+    edits_note()
+    whatif_panel(prep)
+    levers = changed_levers()
+    if levers:
+        bs = neutral(store())
+        bpr = cached_project(m_view, tuple(tuple(x) for x in units), market, horizon, method, measure, mode, get_mult(bs), get_sig(bs), get_w(bs), get_prices(bs), ml,
+                             get_crm(bs, measure, get_prices(bs)), apply_signals_on(bs))
+        whatif_strip([delta_chip(t("Pronóstico {h} meses", h=horizon), float(fc.sum()), float(bpr.fc.sum()), fv)], levers)
+    else:
+        whatif_strip([], [])
 
-        # ── Row 3: chart + donut (multi-caliber) or chart alone ──
-        _multi_cal = len(pr.detail) > 1
-        if _multi_cal:
-            _c_chart, _c_donut = st.columns([3, 2])
-            fig_slot = _c_chart.container()
-            _donut_slot: st.container | None = _c_donut.container()
-        else:
-            fig_slot = st.container()
-            _donut_slot = None
-        ctl_slot = st.container()
+    # ── KPIs ─────────────────────────────────────────────
+    with st.container(key="result"):
+        acc = ui.acc_html(pr.error, short=True)
+        st.html(ui.kpis([(fv(fc[0]), t("Venta pronosticada {mes} ({u})", mes=mes_largo(pr.index[0]), u=unit)),
+                         (fv(fc.sum()), t("Venta total {h} meses ({u})", h=horizon, u=unit)),
+                         (Raw(f"{max(0, 100 - pr.error):.1f}%"), t("Precisión en prueba histórica"), acc),
+                         (f"{fv(lo[0])} – {fv(hi[0])}", t("Rango del 80% del próximo mes"))], cols=4))
 
-        cons = None
-        if A and len(units) == 1 and len(units[0]) == 1:
-            cons = consensus_block(units[0][0], market, measure, horizon, method, fc, pr.index, unit)
-        if len(pr.detail) > 1 or len(units) > 1:
-            calibre_table(pr, horizon, fv, unit)
-        if color_filter is None and "color" in m.columns and not money:
-            _color_forecast_section(m, pr, allg, horizon, unit)
-        if A:
+    # ── Row 3: chart + donut (multi-caliber) or chart alone ──
+    _multi_cal = len(pr.detail) > 1
+    if _multi_cal:
+        _c_chart, _c_donut = st.columns([3, 2])
+        fig_slot = _c_chart.container()
+        _donut_slot: st.container | None = _c_donut.container()
+    else:
+        fig_slot = st.container()
+        _donut_slot = None
+    ctl_slot = st.container()
+
+    cons = None
+    if A and len(units) == 1 and len(units[0]) == 1:
+        cons = consensus_block(units[0][0], market, measure, horizon, method, fc, pr.index, unit)
+    if len(pr.detail) > 1 or len(units) > 1:
+        calibre_table(pr, horizon, fv, unit)
+    if color_filter is None and "color" in m.columns and not money:
+        _color_forecast_section(m, pr, allg, horizon, unit)
+    if A:
+        waterfall_block(horizon)
+    else:
+        with st.expander(t("Por qué cambió el pronóstico")):
             waterfall_block(horizon)
+    if A:
+        explain_block(ml, units, market, horizon, pr.index, len(prep.gauges))
+    m_raw = monthly_edited()
+    det = cached_detect(m_raw)
+    if A:
+        atypical_block(m_raw, det, allg, E.windows_for(m_raw))
+    methods_df = pd.DataFrame()
+    if A:
+        methods_df = compare_table(m_view, allg, market, horizon, measure, prices, ml, pr, bt, w, sig, mult, mode, units, method, fv, unit)
+        _lap("compare_table (tabla de métodos)")
+        ml_block(ml, m, units, market, measure, prices)
+        _lap("ml_block + lowvol + tracking")
+        lowvol_block(m, allg)
+        tracking_block(m, ml, allg)
+
+    with ctl_slot:
+        c1, c2 = st.columns([1, 3])
+        show_trend = wid(st.toggle, t("Tendencia de 12 meses"), "tg_trend", True)
+        cmp_names = []
+        if A:
+            opts = [x for x in list(bt["Método"])[:5] if x != pr.method]
+            with c2:
+                cmp_names = st.pills(t("Comparar con otros métodos"), opts, selection_mode="multi", key="chips_cmp", format_func=t) or []
+    marks = atypical_marks(det, allg, hist) if A else []
+    compare = [(t(n), cached_project(m_view, tuple(tuple(x) for x in units), market, horizon, n, measure, mode, mult, sig, w, prices, ml, get_crm(None, measure, prices), apply_signals_on()).fc) for n in cmp_names]
+
+    with fig_slot:
+        if _multi_cal:
+            st.plotly_chart(
+                ui.stacked_area_fig(pr.detail, list(hist.index), list(pr.index), lo, hi, unit),
+                width="stretch", theme=None, config={"displayModeBar": False},
+            )
         else:
-            with st.expander(t("Por qué cambió el pronóstico")):
-                waterfall_block(horizon)
-        if A:
-            explain_block(ml, units, market, horizon, pr.index, len(prep.gauges))
-        m_raw = monthly_edited()
-        det = cached_detect(m_raw)
-        if A:
-            atypical_block(m_raw, det, allg, E.windows_for(m_raw))
-        methods_df = pd.DataFrame()
-        if A:
-            methods_df = compare_table(m_view, allg, market, horizon, measure, prices, ml, pr, bt, w, sig, mult, mode, units, method, fv, unit)
-            _lap("compare_table (tabla de métodos)")
-            ml_block(ml, m, units, market, measure, prices)
-            _lap("ml_block + lowvol + tracking")
-            lowvol_block(m, allg)
-            tracking_block(m, ml, allg)
+            st.plotly_chart(ui.forecast_fig(list(hist.index), hist.values, list(pr.index), fc, lo, hi, unit, main_name, cons, money=money,
+                                            trend=show_trend, compare=compare, marks=marks), width="stretch", theme=None, config={"displayModeBar": False})
 
-        with ctl_slot:
-            c1, c2 = st.columns([1, 3])
-            show_trend = wid(st.toggle, t("Tendencia de 12 meses"), "tg_trend", True)
-            cmp_names = []
-            if A:
-                opts = [x for x in list(bt["Método"])[:5] if x != pr.method]
-                with c2:
-                    cmp_names = st.pills(t("Comparar con otros métodos"), opts, selection_mode="multi", key="chips_cmp", format_func=t) or []
-        marks = atypical_marks(det, allg, hist) if A else []
-        compare = [(t(n), cached_project(m_view, tuple(tuple(x) for x in units), market, horizon, n, measure, mode, mult, sig, w, prices, ml, get_crm(None, measure, prices), apply_signals_on()).fc) for n in cmp_names]
+    if _donut_slot is not None:
+        with _donut_slot:
+            _wd = waterfall_data(horizon)
+            st.html(ui.donut_html(_wd["steps"], _wd["start"], _wd["end"], "t" if not money else "M$"))
 
-        with fig_slot:
-            if _multi_cal:
-                st.plotly_chart(
-                    ui.stacked_area_fig(pr.detail, list(hist.index), list(pr.index), lo, hi, unit),
-                    width="stretch", theme=None, config={"displayModeBar": False},
-                )
-            else:
-                st.plotly_chart(ui.forecast_fig(list(hist.index), hist.values, list(pr.index), fc, lo, hi, unit, main_name, cons, money=money,
-                                                trend=show_trend, compare=compare, marks=marks), width="stretch", theme=None, config={"displayModeBar": False})
-
-        if _donut_slot is not None:
-            with _donut_slot:
-                _wd = waterfall_data(horizon)
-                st.html(ui.donut_html(_wd["steps"], _wd["start"], _wd["end"], "t" if not money else "M$"))
-
-        # ── Row 4: conclusion tile ────────────────────────────
-        st.html(ui.conclusion_tile_html(
-            fc_next=float(fc[0]), lo_next=float(lo[0]), hi_next=float(hi[0]),
-            fc_total=float(fc.sum()), lo_total=float(lo.sum()), hi_total=float(hi.sum()),
-            precision=_precision, sesgo=_sesgo, method_name=main_name,
-            yoy=yoy, horizon=horizon, unit=unit,
-        ))
+    # ── Row 4: conclusion tile ────────────────────────────
+    st.html(ui.conclusion_tile_html(
+        fc_next=float(fc[0]), lo_next=float(lo[0]), hi_next=float(hi[0]),
+        fc_total=float(fc.sum()), lo_total=float(lo.sum()), hi_total=float(hi.sum()),
+        precision=_precision, sesgo=_sesgo, method_name=main_name,
+        yoy=yoy, horizon=horizon, unit=unit,
+    ))
 
     # ── registrar tiempos de esta visita ────────────────────────────────────────
     _total_ms = round((time.perf_counter() - _t_fn) * 1000, 1)
