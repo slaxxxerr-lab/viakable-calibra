@@ -1970,37 +1970,39 @@ def section_planeacion():
     has_exp = (m["mkt"] == MKT_USA).any()
     A = adv()
     u = ui.UNIT
-    left, right = layout()
-    with left:
-        units, market, horizon, color_filter = selection_controls(prep)
+    units, market, horizon, color_filter = selection_controls(prep)
+    _pl_c1, _pl_c2, _pl_c3 = st.columns(3, gap="medium")
+    with _pl_c1:
         wid(st.radio, t("Nivel de servicio"), "seg_service", 95, options=[90, 95, 98, 99], horizontal=True, format_func=lambda v: f"{v}%")
         st.caption(t("Probabilidad de no quedarse sin inventario durante el tiempo de reposición."))
+    with _pl_c2:
         wid(st.slider, t("Tiempo de reposición (meses)"), "pl_lt", 1.5, min_value=0.25, max_value=4.0, step=0.25)
         st.caption(t("Meses entre pedir metal y tener cable terminado."))
+    with _pl_c3:
         wid(st.slider, t("Costo anual de mantener inventario"), "pl_hold", 25, min_value=5, max_value=50, step=1, format="%d%%")
         st.caption(t("Capital, almacén, seguros y mermas como porcentaje del valor."))
-        if A:
-            st.html(ui.group_title(t("Metal y márgenes")))
-            wid(st.number_input, t("Cobre (USD/t)"), "pl_cu", 9840.0, min_value=0.0, step=10.0, disabled=px_disabled("cu"))
-            wid(st.number_input, t("Aluminio (USD/t)"), "pl_al", 2600.0, min_value=0.0, step=10.0, disabled=px_disabled("al"))
-            if px_disabled("cu") or px_disabled("al"):
-                st.caption(t("Precio en vivo; para escribir uno manual ve a Metales."))
-            wid(st.slider, t("Escenario de precio del metal"), "pl_mchg", 0, min_value=-30, max_value=30, step=1, format="%+d%%")
-            st.caption(t("Mueve el costo del metal sin cambiar tu precio de venta: muestra cuánto margen se pierde o se gana."))
-            wid(st.number_input, t("Tipo de cambio (MXN por USD)"), "pl_fx", 18.5, min_value=1.0, step=0.1, disabled=px_disabled("fx"))
-            wid(st.number_input, t("Costo de conversión cobre (MXN/t)"), "pl_ccu", 25000.0, min_value=0.0, step=500.0)
-            wid(st.number_input, t("Costo de conversión aluminio (MXN/t)"), "pl_cal", 15000.0, min_value=0.0, step=500.0)
-            st.caption(t("Energía, mano de obra, aislamiento y empaque por tonelada."))
-            wid(st.slider, t("Metal en las toneladas"), "pl_metalpct", 100, min_value=10, max_value=100, step=1, format="%d%%")
-            st.caption(t("Si tus toneladas ya son contenido metálico (ContMet), déjalo en 100%."))
-            if has_exp:
-                st.html(ui.group_title(t("Exportación a EE. UU.")))
-                wid(st.slider, t("Tiempo extra de reposición (meses)"), "pl_explt", 0.5, min_value=0.0, max_value=2.0, step=0.25)
-                wid(st.number_input, t("Flete a EE. UU. (USD/t)"), "pl_freight", 120.0, min_value=0.0, step=10.0)
-                wid(st.checkbox, t("Viakable paga el arancel (DDP)"), "pl_ddp", False)
-            st.html(ui.group_title(t("Pronóstico base")))
-            wid(st.selectbox, t("Método del plan"), "pl_base", E.AUTO, options=[E.AUTO, E.SIGNAL],
-                format_func=lambda i: t("Automático: el más certero") if i == E.AUTO else t("Modelo por señales"))
+    if A:
+        st.html(ui.group_title(t("Metal y márgenes")))
+        wid(st.number_input, t("Cobre (USD/t)"), "pl_cu", 9840.0, min_value=0.0, step=10.0, disabled=px_disabled("cu"))
+        wid(st.number_input, t("Aluminio (USD/t)"), "pl_al", 2600.0, min_value=0.0, step=10.0, disabled=px_disabled("al"))
+        if px_disabled("cu") or px_disabled("al"):
+            st.caption(t("Precio en vivo; para escribir uno manual ve a Metales."))
+        wid(st.slider, t("Escenario de precio del metal"), "pl_mchg", 0, min_value=-30, max_value=30, step=1, format="%+d%%")
+        st.caption(t("Mueve el costo del metal sin cambiar tu precio de venta: muestra cuánto margen se pierde o se gana."))
+        wid(st.number_input, t("Tipo de cambio (MXN por USD)"), "pl_fx", 18.5, min_value=1.0, step=0.1, disabled=px_disabled("fx"))
+        wid(st.number_input, t("Costo de conversión cobre (MXN/t)"), "pl_ccu", 25000.0, min_value=0.0, step=500.0)
+        wid(st.number_input, t("Costo de conversión aluminio (MXN/t)"), "pl_cal", 15000.0, min_value=0.0, step=500.0)
+        st.caption(t("Energía, mano de obra, aislamiento y empaque por tonelada."))
+        wid(st.slider, t("Metal en las toneladas"), "pl_metalpct", 100, min_value=10, max_value=100, step=1, format="%d%%")
+        st.caption(t("Si tus toneladas ya son contenido metálico (ContMet), déjalo en 100%."))
+        if has_exp:
+            st.html(ui.group_title(t("Exportación a EE. UU.")))
+            wid(st.slider, t("Tiempo extra de reposición (meses)"), "pl_explt", 0.5, min_value=0.0, max_value=2.0, step=0.25)
+            wid(st.number_input, t("Flete a EE. UU. (USD/t)"), "pl_freight", 120.0, min_value=0.0, step=10.0)
+            wid(st.checkbox, t("Viakable paga el arancel (DDP)"), "pl_ddp", False)
+        st.html(ui.group_title(t("Pronóstico base")))
+        wid(st.selectbox, t("Método del plan"), "pl_base", E.AUTO, options=[E.AUTO, E.SIGNAL],
+            format_func=lambda i: t("Automático: el más certero") if i == E.AUTO else t("Modelo por señales"))
 
     gauges = tuple(g for x in units for g in x)
     m_view = m if color_filter is None else m[m["color"].isin(color_filter)]
@@ -2012,89 +2014,91 @@ def section_planeacion():
     tot = PL.totals(res, market)
     months = [ui.mes(x) for x in res.months]
 
-    with right:
-        st.html(ui.headline(t("Plan de inventario y compras de metal para {h} meses", h=horizon) + (f" · {t(market)}" if market else ""),
-                            t("Convierte el pronóstico de cada calibre y mercado en inventario de seguridad, producción, compras de metal, margen y uso "
-                              "de capacidad. Edita precios, inventario y capacidad en las tablas.")))
-        if rows.empty:
-            st.warning(t("No hay ventas para esa selección."))
-            return
-        edits_note()
-        levers = changed_levers()
-        if levers:
-            bs = neutral(store())
-            res_b = cached_plan(m_view, gauges, horizon, get_params(bs), get_prices(bs), get_mult(bs), get_sig(bs), get_w(bs), ov, ml, get_crm(bs, E.TON, get_prices(bs)))
-            tb_ = PL.totals(res_b, market)
-            whatif_strip([delta_chip(t("Volumen {h} meses", h=horizon), tot["vol"], tb_["vol"], kg), delta_chip(t("Ingreso {h} meses", h=horizon), tot["rev"], tb_["rev"], ui.mxn),
-                          delta_chip(t("Margen bruto"), tot["margin"], tb_["margin"], ui.mxn),
-                          delta_chip(t("Inventario de seguridad"), tot["ss"], tb_["ss"], kg, good_up=False)], levers)
-        else:
-            whatif_strip([], [])
-        st.html(ui.kpis([(kg(tot["ss"]), t("Inventario de seguridad")), (ui.mxn(tot["ss_value"]), t("Valor del inventario de seguridad")),
-                         (Raw(f'<span class="{"neg" if tot["freed"] < 0 else ""}">{esc(ui.mxn(tot["freed"]))}</span>'), t("Capital liberado vs método tradicional"),
-                          t("Error promedio {a}% contra {b}% del método tradicional", a=f"{tot['err']:.1f}", b=f"{tot['err_trad']:.1f}")),
-                         (ui.mxn(tot["saving"]), t("Ahorro anual por mantener menos inventario"))]))
-        st.html(ui.kpis([(ui.mxn(tot["rev"]), t("Ingreso pronosticado {h} meses", h=horizon)),
-                         (Raw(f'<span class="{"neg" if tot["margin"] < 0 else ""}">{esc(ui.mxn(tot["margin"]))}</span>'), t("Margen bruto pronosticado"),
-                          t("{p}% · cada +10% en el metal: -{x}", p=f"{tot['margin_pct']:.1f}", x=ui.mxn(tot["margin_lost_10"]))),
-                         (kg(tot["cu"]), t("Cobre requerido {h} meses", h=horizon)), (kg(tot["al"]), t("Aluminio requerido {h} meses", h=horizon))]))
-        over = tot["over_months"]
-        if A:
-            st.html(ui.kpis([(kg(tot["exp"]) if has_exp else "—", t("Exportación EE. UU. {h} meses", h=horizon),
-                              t("{p}% del total", p=f"{tot['exp'] / max(tot['vol'], 1e-9) * 100:.1f}") if has_exp else ""),
-                             (ui.mxn(tot["metal_cost"]), t("Costo del metal del pronóstico")),
-                             (Raw(f'<span class="{"neg" if over else ""}">{over}</span>'), t("Meses con capacidad excedida"))], cols=3))
+    _plan_scope = (f" · {t(market)}" if market else "")
+    st.html(ui.section_header_html(
+        eyebrow=t("PLAN DE COMPRAS · {h} MESES", h=horizon) + _plan_scope.upper(),
+        headline=t("Plan de inventario y compras de metal para {h} meses", h=horizon) + _plan_scope,
+        sub=t("Convierte el pronóstico de cada calibre y mercado en inventario de seguridad, producción, compras de metal, margen y uso de capacidad. Edita precios, inventario y capacidad en las tablas."),
+    ))
+    if rows.empty:
+        st.warning(t("No hay ventas para esa selección."))
+        return
+    edits_note()
+    levers = changed_levers()
+    if levers:
+        bs = neutral(store())
+        res_b = cached_plan(m_view, gauges, horizon, get_params(bs), get_prices(bs), get_mult(bs), get_sig(bs), get_w(bs), ov, ml, get_crm(bs, E.TON, get_prices(bs)))
+        tb_ = PL.totals(res_b, market)
+        whatif_strip([delta_chip(t("Volumen {h} meses", h=horizon), tot["vol"], tb_["vol"], kg), delta_chip(t("Ingreso {h} meses", h=horizon), tot["rev"], tb_["rev"], ui.mxn),
+                      delta_chip(t("Margen bruto"), tot["margin"], tb_["margin"], ui.mxn),
+                      delta_chip(t("Inventario de seguridad"), tot["ss"], tb_["ss"], kg, good_up=False)], levers)
+    else:
+        whatif_strip([], [])
+    st.html(ui.kpis([(kg(tot["ss"]), t("Inventario de seguridad")), (ui.mxn(tot["ss_value"]), t("Valor del inventario de seguridad")),
+                     (Raw(f'<span class="{"neg" if tot["freed"] < 0 else ""}">{esc(ui.mxn(tot["freed"]))}</span>'), t("Capital liberado vs método tradicional"),
+                      t("Error promedio {a}% contra {b}% del método tradicional", a=f"{tot['err']:.1f}", b=f"{tot['err_trad']:.1f}")),
+                     (ui.mxn(tot["saving"]), t("Ahorro anual por mantener menos inventario"))]))
+    st.html(ui.kpis([(ui.mxn(tot["rev"]), t("Ingreso pronosticado {h} meses", h=horizon)),
+                     (Raw(f'<span class="{"neg" if tot["margin"] < 0 else ""}">{esc(ui.mxn(tot["margin"]))}</span>'), t("Margen bruto pronosticado"),
+                      t("{p}% · cada +10% en el metal: -{x}", p=f"{tot['margin_pct']:.1f}", x=ui.mxn(tot["margin_lost_10"]))),
+                     (kg(tot["cu"]), t("Cobre requerido {h} meses", h=horizon)), (kg(tot["al"]), t("Aluminio requerido {h} meses", h=horizon))]))
+    over = tot["over_months"]
+    if A:
+        st.html(ui.kpis([(kg(tot["exp"]) if has_exp else "—", t("Exportación EE. UU. {h} meses", h=horizon),
+                          t("{p}% del total", p=f"{tot['exp'] / max(tot['vol'], 1e-9) * 100:.1f}") if has_exp else ""),
+                         (ui.mxn(tot["metal_cost"]), t("Costo del metal del pronóstico")),
+                         (Raw(f'<span class="{"neg" if over else ""}">{over}</span>'), t("Meses con capacidad excedida"))], cols=3))
 
-        st.html(ui.h2(t("Requerimiento mensual de metal"), t("Toneladas de metal a comprar cada mes según la producción sugerida.")))
-        cu = sum(a for a, mt in zip(rows["metal_req"], rows["metal"]) if mt == "cu") if (rows["metal"] == "cu").any() else np.zeros(horizon)
-        al = sum(a for a, mt in zip(rows["metal_req"], rows["metal"]) if mt == "al") if (rows["metal"] == "al").any() else np.zeros(horizon)
-        st.plotly_chart(ui.bar_fig(months, {t("Cobre"): cu, t("Aluminio"): al}, {t("Cobre"): ui.RED, t("Aluminio"): ui.GRAY}),
-                        width="stretch", theme=None, config={"displayModeBar": False})
+    st.html(ui.h2(t("Requerimiento mensual de metal"), t("Toneladas de metal a comprar cada mes según la producción sugerida.")))
+    cu = sum(a for a, mt in zip(rows["metal_req"], rows["metal"]) if mt == "cu") if (rows["metal"] == "cu").any() else np.zeros(horizon)
+    al = sum(a for a, mt in zip(rows["metal_req"], rows["metal"]) if mt == "al") if (rows["metal"] == "al").any() else np.zeros(horizon)
+    st.plotly_chart(ui.bar_fig(months, {t("Cobre"): cu, t("Aluminio"): al}, {t("Cobre"): ui.RED, t("Aluminio"): ui.GRAY}),
+                    width="stretch", theme=None, config={"displayModeBar": False})
 
-        if A:
-            st.html(ui.h2(t("Parámetros por calibre"), t("Inventario de seguridad = z × 1.25 × error × demanda media × √tiempo de reposición. El método "
-                                                         "tradicional necesitaría más inventario por ser menos certero.")))
-            tb = []
-            for r in rows.itertuples():
-                mk_b = ui.badge(t("EE. UU."), "fill") if r.is_exp else t(r.mkt)
-                tb.append([Raw(f"<b>{esc(ui.cal_label(r.cal))}</b>"), mk_b, t("Aluminio") if r.metal == "al" else t("Cobre"), f"{r.mean:,.1f}", ui.acc_html(r.error, True),
-                           Raw(f"<b>{r.ss:,.1f}</b>"), f"{r.rop:,.1f}", f"{r.inv:,.1f}", f"{r.prod_t:,.0f}",
-                           f"{r.price:,.0f} " + ("USD/t" if r.is_exp else "MXN/t"), ui.mxn(r.rev),
-                           Raw(f'<span class="{"neg" if r.margin < 0 else ""}">{esc(ui.mxn(r.margin))}</span>'),
-                           Raw(f'<span class="{"neg" if r.freed < 0 else ""}">{esc(ui.mxn(r.freed))}</span>')])
-            st.html(ui.table([t("Calibre"), t("Mercado"), t("Metal"), t("Demanda mensual ({u})", u=u), t("Certeza"), t("Inv. seguridad ({u})", u=u),
-                              t("Punto de reorden ({u})", u=u), t("Inventario actual ({u})", u=u), t("Producción {h} m ({u})", h=horizon, u=u), t("Precio"),
-                              t("Ingreso MXN"), t("Margen MXN"), t("Capital liberado MXN")], tb, num=(3, 5, 6, 7, 8, 9, 10, 11, 12), min_w=1240))
-            st.html(f'<p class="syncnote">{esc(t("Precios ilustrativos: edítalos con los de Viakable."))}</p>')
-            edit_rows(rows, ver, prices)
+    if A:
+        st.html(ui.h2(t("Parámetros por calibre"), t("Inventario de seguridad = z × 1.25 × error × demanda media × √tiempo de reposición. El método "
+                                                     "tradicional necesitaría más inventario por ser menos certero.")))
+        tb = []
+        for r in rows.itertuples():
+            mk_b = ui.badge(t("EE. UU."), "fill") if r.is_exp else t(r.mkt)
+            tb.append([Raw(f"<b>{esc(ui.cal_label(r.cal))}</b>"), mk_b, t("Aluminio") if r.metal == "al" else t("Cobre"), f"{r.mean:,.1f}", ui.acc_html(r.error, True),
+                       Raw(f"<b>{r.ss:,.1f}</b>"), f"{r.rop:,.1f}", f"{r.inv:,.1f}", f"{r.prod_t:,.0f}",
+                       f"{r.price:,.0f} " + ("USD/t" if r.is_exp else "MXN/t"), ui.mxn(r.rev),
+                       Raw(f'<span class="{"neg" if r.margin < 0 else ""}">{esc(ui.mxn(r.margin))}</span>'),
+                       Raw(f'<span class="{"neg" if r.freed < 0 else ""}">{esc(ui.mxn(r.freed))}</span>')])
+        st.html(ui.table([t("Calibre"), t("Mercado"), t("Metal"), t("Demanda mensual ({u})", u=u), t("Certeza"), t("Inv. seguridad ({u})", u=u),
+                          t("Punto de reorden ({u})", u=u), t("Inventario actual ({u})", u=u), t("Producción {h} m ({u})", h=horizon, u=u), t("Precio"),
+                          t("Ingreso MXN"), t("Margen MXN"), t("Capital liberado MXN")], tb, num=(3, 5, 6, 7, 8, 9, 10, 11, 12), min_w=1240))
+        st.html(f'<p class="syncnote">{esc(t("Precios ilustrativos: edítalos con los de Viakable."))}</p>')
+        edit_rows(rows, ver, prices)
 
-        cap = res.capacity
-        st.html(ui.h2(t("Capacidad de planta por calibre"), t("Producción requerida de todos los mercados como porcentaje de la capacidad mensual. Por omisión, la "
-                                                              "capacidad es 10% arriba del mejor mes de los últimos dos años; edítala con la real.")))
-        cr = []
-        for c in cap.sort_values("cal", key=lambda s: s.map(lambda x: int(x) if str(x).isdigit() else 99)).itertuples():
-            cells = [Raw(f"<b>{esc(ui.cal_label(c.cal))}</b>" + (f' <span class="badge warn">{esc(t("Cuello de botella"))}</span>' if c.over else "")), f"{c.cap:,.1f}"]
-            cells += [Raw(f'<span style="{"color:var(--accent);font-weight:700" if x > 100 else "font-weight:700" if x > 90 else ""}">{x:.0f}%</span>') for x in c.util]
-            cells.append(Raw(f'<b class="neg">{c.deficit:,.0f}</b>') if c.deficit > 0 else "—")
-            cr.append(cells)
-        st.html(ui.table([t("Calibre"), t("Capacidad mensual ({u})", u=u), *months, t("Déficit ({u})", u=u)], cr, num=tuple(range(1, horizon + 3)), min_w=820))
-        if A:
-            edit_caps(cap, ver)
+    cap = res.capacity
+    st.html(ui.h2(t("Capacidad de planta por calibre"), t("Producción requerida de todos los mercados como porcentaje de la capacidad mensual. Por omisión, la "
+                                                          "capacidad es 10% arriba del mejor mes de los últimos dos años; edítala con la real.")))
+    cr = []
+    for c in cap.sort_values("cal", key=lambda s: s.map(lambda x: int(x) if str(x).isdigit() else 99)).itertuples():
+        cells = [Raw(f"<b>{esc(ui.cal_label(c.cal))}</b>" + (f' <span class="badge warn">{esc(t("Cuello de botella"))}</span>' if c.over else "")), f"{c.cap:,.1f}"]
+        cells += [Raw(f'<span style="{"color:var(--accent);font-weight:700" if x > 100 else "font-weight:700" if x > 90 else ""}">{x:.0f}%</span>') for x in c.util]
+        cells.append(Raw(f'<b class="neg">{c.deficit:,.0f}</b>') if c.deficit > 0 else "—")
+        cr.append(cells)
+    st.html(ui.table([t("Calibre"), t("Capacidad mensual ({u})", u=u), *months, t("Déficit ({u})", u=u)], cr, num=tuple(range(1, horizon + 3)), min_w=820))
+    if A:
+        edit_caps(cap, ver)
 
-            st.html(ui.h2(t("Producción sugerida por mes"), t("Producción necesaria para cubrir el pronóstico y terminar cada mes con el inventario de seguridad.")))
-            byc = {}
-            for r in res.rows.itertuples():
-                byc[r.cal] = byc.get(r.cal, np.zeros(horizon)) + r.prod
-            pr_rows = [[Raw(f"<b>{esc(ui.cal_label(c))}</b>"), *[f"{x:,.0f}" for x in v], Raw(f"<b>{v.sum():,.0f}</b>")]
-                       for c, v in sorted(byc.items(), key=lambda kv: int(kv[0]) if kv[0].isdigit() else 99)]
-            main = []
-            for key, lab in (("cu", "Cobre"), ("al", "Aluminio")):
-                v = sum((a for a, mt in zip(res.rows["metal_req"], res.rows["metal"]) if mt == key), np.zeros(horizon))
-                if np.any(v):
-                    main.append(len(pr_rows))
-                    pr_rows.append([Raw(f"<b>{esc(t(lab))} ({u})</b>"), *[Raw(f"<b>{x:,.0f}</b>") for x in v], Raw(f"<b>{v.sum():,.0f}</b>")])
-            st.html(ui.table([t("Calibre"), *months, t("Total")], pr_rows, num=tuple(range(1, horizon + 2)), min_w=760, main_rows=main))
-            scenarios_block(m, gauges, horizon, market, tot, res, ml)
+        st.html(ui.h2(t("Producción sugerida por mes"), t("Producción necesaria para cubrir el pronóstico y terminar cada mes con el inventario de seguridad.")))
+        byc = {}
+        for r in res.rows.itertuples():
+            byc[r.cal] = byc.get(r.cal, np.zeros(horizon)) + r.prod
+        pr_rows = [[Raw(f"<b>{esc(ui.cal_label(c))}</b>"), *[f"{x:,.0f}" for x in v], Raw(f"<b>{v.sum():,.0f}</b>")]
+                   for c, v in sorted(byc.items(), key=lambda kv: int(kv[0]) if kv[0].isdigit() else 99)]
+        main = []
+        for key, lab in (("cu", "Cobre"), ("al", "Aluminio")):
+            v = sum((a for a, mt in zip(res.rows["metal_req"], res.rows["metal"]) if mt == key), np.zeros(horizon))
+            if np.any(v):
+                main.append(len(pr_rows))
+                pr_rows.append([Raw(f"<b>{esc(t(lab))} ({u})</b>"), *[Raw(f"<b>{x:,.0f}</b>") for x in v], Raw(f"<b>{v.sum():,.0f}</b>")])
+        st.html(ui.table([t("Calibre"), *months, t("Total")], pr_rows, num=tuple(range(1, horizon + 2)), min_w=760, main_rows=main))
+        scenarios_block(m, gauges, horizon, market, tot, res, ml)
 
 
 def edit_rows(rows, ver, prices):
@@ -2479,60 +2483,62 @@ def section_metales():
     ml = get_ml(m, E.windows_for(m))
     gauges = tuple(prep.gauges)
     hist = price_history()
-    left, right = layout()
-    with left:
-        horizon = wid(st.radio, t("Horizonte"), "seg_h", 6, options=[3, 6, 12], horizontal=True, format_func=lambda x: t("{n} meses", n=x))
-        st.html(ui.group_title(t("Precios actuales")))
+    _hc1, _hc2, _hc3, _hc4 = st.columns([1, 2, 2, 2], gap="medium")
+    with _hc1:
+        horizon = wid(st.radio, t("Horizonte"), "seg_h", 6, options=[3, 6, 12], horizontal=False, format_func=lambda x: t("{n} meses", n=x))
+    with _hc2:
         cu0 = price_control("cu", t("Cobre (USD/t)"), "pl_cu", 9840.0, 10.0, 0.0)
+    with _hc3:
         al0 = price_control("al", t("Aluminio (USD/t)"), "pl_al", 2600.0, 10.0, 0.0)
-        fx0 = price_control("fx", t("Tipo de cambio (MXN por USD)"), "pl_fx", 18.5, 0.1, 1.0)
-        st.caption(t("COMEX es una referencia cercana al LME, no el precio oficial del LME (requiere licencia de pago)."))
-        if adv():
-            with st.expander(t("Referencia de los precios de lista")):
-                st.caption(t("Los precios de lista de Planeación se fijaron con estos precios de metal (los valores ilustrativos de la app). Si el precio actual es distinto, el traspaso mueve el precio de venta. Cámbialos por los de tu lista real."))
-                wid(st.number_input, t("Cobre de referencia (USD/t)"), "mt_ref_cu", ref_value(None, "cu"), min_value=0.0, step=10.0)
-                wid(st.number_input, t("Aluminio de referencia (USD/t)"), "mt_ref_al", ref_value(None, "al"), min_value=0.0, step=10.0)
-                wid(st.number_input, t("Tipo de cambio de referencia"), "mt_ref_fx", ref_value(None, "fx"), min_value=1.0, step=0.1)
+    with _hc4:
+        fx0 = price_control("fx", t("Tipo de cambio (MXN/USD)"), "pl_fx", 18.5, 0.1, 1.0)
+    st.caption(t("COMEX es una referencia cercana al LME, no el precio oficial del LME (requiere licencia de pago)."))
+    if adv():
+        with st.expander(t("Referencia de los precios de lista")):
+            st.caption(t("Los precios de lista de Planeación se fijaron con estos precios de metal (los valores ilustrativos de la app). Si el precio actual es distinto, el traspaso mueve el precio de venta. Cámbialos por los de tu lista real."))
+            wid(st.number_input, t("Cobre de referencia (USD/t)"), "mt_ref_cu", ref_value(None, "cu"), min_value=0.0, step=10.0)
+            wid(st.number_input, t("Aluminio de referencia (USD/t)"), "mt_ref_al", ref_value(None, "al"), min_value=0.0, step=10.0)
+            wid(st.number_input, t("Tipo de cambio de referencia"), "mt_ref_fx", ref_value(None, "fx"), min_value=1.0, step=0.1)
 
-        wid(st.slider, t("Traspaso del metal al precio de venta"), "mt_pass", PASS_THROUGH_DEFAULT, min_value=0, max_value=100, step=5, format="%d%%")
-        st.caption(t("Qué parte de un cambio en el costo del metal se traslada al precio de lista. Con 0% el margen absorbe todo. Supuesto de la empresa: {n}%.", n=int(PASS_THROUGH_DEFAULT)))
-        st.html(ui.group_title(t("Camino de precios, 12 meses")))
-        kinds = ["flat", "pct", "manual"] + (["trend"] if hist is not None else [])
-        klabel = {"flat": "Precio actual constante", "pct": "Escenario en %", "manual": "Tabla mes por mes", "trend": "Tendencia del histórico"}
-        if st.session_state.get("mt_kind") not in kinds + [None]:
-            st.session_state["mt_kind"] = "flat"
-        kind = wid(st.selectbox, t("Cómo definirlo"), "mt_kind", "flat", options=kinds, format_func=lambda k: t(klabel[k]))
-        if kind == "pct":
-            wid(st.slider, t("Cobre: cambio en 12 meses"), "mt_cu_chg", 0, min_value=-40, max_value=40, step=1, format="%+d%%")
-            wid(st.slider, t("Aluminio: cambio en 12 meses"), "mt_al_chg", 0, min_value=-40, max_value=40, step=1, format="%+d%%")
-            wid(st.slider, t("Tipo de cambio: cambio en 12 meses"), "mt_fx_chg", 0, min_value=-20, max_value=20, step=1, format="%+d%%")
-            wid(st.radio, t("Forma del cambio"), "seg_mt_shape", "lineal", options=["lineal", "inmediato"], horizontal=True, format_func=t)
-        if adv():
-            wid(st.toggle, t("Usar el camino de precios en la señal del cobre"), "mt_link", True)
-            wid(st.toggle, t("Usar el precio en vivo en la señal del cobre"), "mt_live_sig", True)
-            wid(st.toggle, t("Usar el histórico automático de precios (COMEX/ALI)"), "mt_auto_hist", True)
-            st.caption(t("Si el cobre sube, la señal del cobre reduce un poco la demanda (sensibilidad en Señales)."))
-            st.html(ui.group_title(t("Histórico de precios")))
-            generic = st.radio(t("Si el archivo trae una sola columna de precio, es de"), ["cu", "al"], horizontal=True, key="seg_mt_generic",
-                               format_func=lambda k: t("Cobre") if k == "cu" else t("Aluminio"))
-            up = st.file_uploader(t("Sube fecha y precio (.xlsx o .csv)"), type=["xlsx", "xls", "csv"], key="mt_file")
-            if up is not None and st.session_state.get("mt_hist_name") != up.name:
-                err = load_price_file(up, generic)
-                if err:
-                    st.error(err)
-                else:
-                    st.rerun()
-            if hist is not None:
-                st.caption(t("Histórico cargado: {n} meses ({a} a {b}).", n=len(hist), a=ui.mes(hist["ym"].min(), True), b=ui.mes(hist["ym"].max(), True)))
-                if st.button(t("Quitar histórico"), key="mt_hist_del"):
-                    for k in ("mt_hist", "mt_hist_name"):
-                        st.session_state.pop(k, None)
-                    st.rerun()
-            st.download_button(t("Descargar plantilla de precios"), price_template(), file_name=t("plantilla-precios-metal.xlsx"),
-                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key="dl_tpl_px", width="stretch")
-        st.html(ui.group_title(t("Compra de metal")))
-        ahead = wid(st.slider, t("Anticipación máxima (meses)"), "mt_ahead", 6, min_value=1, max_value=12, step=1) if adv() else sv("mt_ahead", 6)
-        hold = wid(st.slider, t("Costo anual de mantener inventario"), "pl_hold", 25, min_value=5, max_value=50, step=1, format="%d%%")
+    wid(st.slider, t("Traspaso del metal al precio de venta"), "mt_pass", PASS_THROUGH_DEFAULT, min_value=0, max_value=100, step=5, format="%d%%")
+    st.caption(t("Qué parte de un cambio en el costo del metal se traslada al precio de lista. Con 0% el margen absorbe todo. Supuesto de la empresa: {n}%.", n=int(PASS_THROUGH_DEFAULT)))
+    st.html(ui.group_title(t("Camino de precios, 12 meses")))
+    kinds = ["flat", "pct", "manual"] + (["trend"] if hist is not None else [])
+    klabel = {"flat": "Precio actual constante", "pct": "Escenario en %", "manual": "Tabla mes por mes", "trend": "Tendencia del histórico"}
+    if st.session_state.get("mt_kind") not in kinds + [None]:
+        st.session_state["mt_kind"] = "flat"
+    kind = wid(st.selectbox, t("Cómo definirlo"), "mt_kind", "flat", options=kinds, format_func=lambda k: t(klabel[k]))
+    if kind == "pct":
+        wid(st.slider, t("Cobre: cambio en 12 meses"), "mt_cu_chg", 0, min_value=-40, max_value=40, step=1, format="%+d%%")
+        wid(st.slider, t("Aluminio: cambio en 12 meses"), "mt_al_chg", 0, min_value=-40, max_value=40, step=1, format="%+d%%")
+        wid(st.slider, t("Tipo de cambio: cambio en 12 meses"), "mt_fx_chg", 0, min_value=-20, max_value=20, step=1, format="%+d%%")
+        wid(st.radio, t("Forma del cambio"), "seg_mt_shape", "lineal", options=["lineal", "inmediato"], horizontal=True, format_func=t)
+    if adv():
+        wid(st.toggle, t("Usar el camino de precios en la señal del cobre"), "mt_link", True)
+        wid(st.toggle, t("Usar el precio en vivo en la señal del cobre"), "mt_live_sig", True)
+        wid(st.toggle, t("Usar el histórico automático de precios (COMEX/ALI)"), "mt_auto_hist", True)
+        st.caption(t("Si el cobre sube, la señal del cobre reduce un poco la demanda (sensibilidad en Señales)."))
+        st.html(ui.group_title(t("Histórico de precios")))
+        generic = st.radio(t("Si el archivo trae una sola columna de precio, es de"), ["cu", "al"], horizontal=True, key="seg_mt_generic",
+                           format_func=lambda k: t("Cobre") if k == "cu" else t("Aluminio"))
+        up = st.file_uploader(t("Sube fecha y precio (.xlsx o .csv)"), type=["xlsx", "xls", "csv"], key="mt_file")
+        if up is not None and st.session_state.get("mt_hist_name") != up.name:
+            err = load_price_file(up, generic)
+            if err:
+                st.error(err)
+            else:
+                st.rerun()
+        if hist is not None:
+            st.caption(t("Histórico cargado: {n} meses ({a} a {b}).", n=len(hist), a=ui.mes(hist["ym"].min(), True), b=ui.mes(hist["ym"].max(), True)))
+            if st.button(t("Quitar histórico"), key="mt_hist_del"):
+                for k in ("mt_hist", "mt_hist_name"):
+                    st.session_state.pop(k, None)
+                st.rerun()
+        st.download_button(t("Descargar plantilla de precios"), price_template(), file_name=t("plantilla-precios-metal.xlsx"),
+                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key="dl_tpl_px", width="stretch")
+    st.html(ui.group_title(t("Compra de metal")))
+    ahead = wid(st.slider, t("Anticipación máxima (meses)"), "mt_ahead", 6, min_value=1, max_value=12, step=1) if adv() else sv("mt_ahead", 6)
+    hold = wid(st.slider, t("Costo anual de mantener inventario"), "pl_hold", 25, min_value=5, max_value=50, step=1, format="%d%%")
 
     months12 = MT.next_months(m["ym"].max())
     # tabla manual: se inicia con el camino actual la primera vez
@@ -2551,99 +2557,101 @@ def section_metales():
     tot_b = PL.totals(res_b)
     k = 1 + sv("pl_mchg", 0) / 100
 
-    with right:
-        end_cu = path["cu"][-1] * k
-        chg_cu = (end_cu / cu0 - 1) * 100 if cu0 else 0
-        st.html(ui.headline(t("El cobre está en {a} USD/t y el camino lo lleva a {b} USD/t en 12 meses ({c}).", a=f"{cu0:,.0f}", b=f"{end_cu:,.0f}", c=f"{chg_cu:+.1f}%"),
-                            t("Cambia el precio actual, el camino mes por mes o un escenario en %. El costo del metal, el margen, el inventario y las compras se recalculan al instante.")))
-        news_note("Precios de metales")
-        whatif_strip([delta_chip(t("Ingreso {h} meses", h=horizon), tot["rev"], tot_b["rev"], ui.mxn),
-                      delta_chip(t("Margen bruto"), tot["margin"], tot_b["margin"], ui.mxn),
-                      delta_chip(t("Costo del metal"), tot["metal_cost"], tot_b["metal_cost"], ui.mxn, good_up=False),
-                      delta_chip(t("Valor del inventario de seguridad"), tot["ss_value"], tot_b["ss_value"], ui.mxn, good_up=False)], changed_levers())
-        st.html(ui.kpis([(ui.mxn(tot["metal_cost"]), t("Costo del metal {h} meses", h=horizon)),
-                         (Raw(f'<span class="{"neg" if tot["margin"] < 0 else ""}">{esc(ui.mxn(tot["margin"]))}</span>'), t("Margen bruto"), f"{tot['margin_pct']:.1f}%"),
-                         (ui.mxn(tot["rev"]), t("Ingreso en pesos {h} meses", h=horizon)),
-                         (ui.mxn(tot["ss_value"]), t("Valor del inventario de seguridad"))]))
-        c1, c2 = st.columns(2, gap="large")
-        for col, key, nm, now in ((c1, "cu", t("Cobre"), cu0), (c2, "al", t("Aluminio"), al0)):
-            hs = hist.set_index("ym")[key].dropna().tail(36) if hist is not None and hist[key].notna().any() else None
-            with col:
-                st.html(ui.h2(nm, t("USD por tonelada")))
-                st.plotly_chart(ui.metal_fig(hs, now, months12, [x * k for x in path[key]], nm), width="stretch", theme=None, config={"displayModeBar": False})
-        # tabla del camino (editable en modo manual)
-        tbl = pd.DataFrame({t("Mes"): [mes_largo(x) for x in months12], t("Cobre (USD/t)"): [round(x * (k if kind != "manual" else 1), 1) for x in path["cu"]],
-                            t("Aluminio (USD/t)"): [round(x * (k if kind != "manual" else 1), 1) for x in path["al"]], t("Tipo de cambio"): [round(x, 3) for x in path["fx"]]})
-        if kind == "manual":
-            st.html(ui.h2(t("Tabla de precios mes por mes"), t("Escribe los precios esperados. El primer mes es el siguiente a tu última venta.")))
-            ver = sv("mt_ver", 0)
-            ed = st.data_editor(tbl, hide_index=True, width="stretch", key=f"ed_path_{ver}_{ST.cfg()['lang']}", disabled=[tbl.columns[0]],
-                                column_config={tbl.columns[1]: st.column_config.NumberColumn(min_value=0.0, step=10.0), tbl.columns[2]: st.column_config.NumberColumn(min_value=0.0, step=10.0),
-                                               tbl.columns[3]: st.column_config.NumberColumn(min_value=1.0, step=0.05)})
-            if not ed.equals(tbl):
-                store()["mt_manual"] = [{"cu": float(r.iloc[1]), "al": float(r.iloc[2]), "fx": float(r.iloc[3])} for _, r in ed.iterrows()]
-                store()["mt_ver"] = ver + 1
-                st.rerun()
+    end_cu = path["cu"][-1] * k
+    chg_cu = (end_cu / cu0 - 1) * 100 if cu0 else 0
+    st.html(ui.section_header_html(
+        eyebrow=t("COMPRAS DE METAL · COBRE {a} USD/T", a=f"{cu0:,.0f}"),
+        headline=t("El cobre está en {a} USD/t y el camino lo lleva a {b} USD/t en 12 meses ({c}).", a=f"{cu0:,.0f}", b=f"{end_cu:,.0f}", c=f"{chg_cu:+.1f}%"),
+        sub=t("Cambia el precio actual, el camino mes por mes o un escenario en %. El costo del metal, el margen, el inventario y las compras se recalculan al instante."),
+    ))
+    news_note("Precios de metales")
+    whatif_strip([delta_chip(t("Ingreso {h} meses", h=horizon), tot["rev"], tot_b["rev"], ui.mxn),
+                  delta_chip(t("Margen bruto"), tot["margin"], tot_b["margin"], ui.mxn),
+                  delta_chip(t("Costo del metal"), tot["metal_cost"], tot_b["metal_cost"], ui.mxn, good_up=False),
+                  delta_chip(t("Valor del inventario de seguridad"), tot["ss_value"], tot_b["ss_value"], ui.mxn, good_up=False)], changed_levers())
+    st.html(ui.kpis([(ui.mxn(tot["metal_cost"]), t("Costo del metal {h} meses", h=horizon)),
+                     (Raw(f'<span class="{"neg" if tot["margin"] < 0 else ""}">{esc(ui.mxn(tot["margin"]))}</span>'), t("Margen bruto"), f"{tot['margin_pct']:.1f}%"),
+                     (ui.mxn(tot["rev"]), t("Ingreso en pesos {h} meses", h=horizon)),
+                     (ui.mxn(tot["ss_value"]), t("Valor del inventario de seguridad"))]))
+    c1, c2 = st.columns(2, gap="large")
+    for col, key, nm, now in ((c1, "cu", t("Cobre"), cu0), (c2, "al", t("Aluminio"), al0)):
+        hs = hist.set_index("ym")[key].dropna().tail(36) if hist is not None and hist[key].notna().any() else None
+        with col:
+            st.html(ui.h2(nm, t("USD por tonelada")))
+            st.plotly_chart(ui.metal_fig(hs, now, months12, [x * k for x in path[key]], nm), width="stretch", theme=None, config={"displayModeBar": False})
+    # tabla del camino (editable en modo manual)
+    tbl = pd.DataFrame({t("Mes"): [mes_largo(x) for x in months12], t("Cobre (USD/t)"): [round(x * (k if kind != "manual" else 1), 1) for x in path["cu"]],
+                        t("Aluminio (USD/t)"): [round(x * (k if kind != "manual" else 1), 1) for x in path["al"]], t("Tipo de cambio"): [round(x, 3) for x in path["fx"]]})
+    if kind == "manual":
+        st.html(ui.h2(t("Tabla de precios mes por mes"), t("Escribe los precios esperados. El primer mes es el siguiente a tu última venta.")))
+        ver = sv("mt_ver", 0)
+        ed = st.data_editor(tbl, hide_index=True, width="stretch", key=f"ed_path_{ver}_{ST.cfg()['lang']}", disabled=[tbl.columns[0]],
+                            column_config={tbl.columns[1]: st.column_config.NumberColumn(min_value=0.0, step=10.0), tbl.columns[2]: st.column_config.NumberColumn(min_value=0.0, step=10.0),
+                                           tbl.columns[3]: st.column_config.NumberColumn(min_value=1.0, step=0.05)})
+        if not ed.equals(tbl):
+            store()["mt_manual"] = [{"cu": float(r.iloc[1]), "al": float(r.iloc[2]), "fx": float(r.iloc[3])} for _, r in ed.iterrows()]
+            store()["mt_ver"] = ver + 1
+            st.rerun()
+    else:
+        with st.expander(t("Ver el camino mes por mes")):
+            st.html(ui.table(list(tbl.columns), [[r.iloc[0], f"{r.iloc[1]:,.0f}", f"{r.iloc[2]:,.0f}", f"{r.iloc[3]:.2f}"] for _, r in tbl.iterrows()], num=(1, 2, 3)))
+
+    # impacto de un movimiento del precio
+    st.html(ui.h2(t("Si el precio del metal se mueve"), t("Compara el plan actual contra el mismo plan con el precio de un metal movido en todos los meses.")))
+    ci = st.columns([1.3, 1.2, 2.5], gap="large", vertical_alignment="bottom")
+    mt_sel = ci[0].radio(t("Metal"), ["cu", "al"], horizontal=True, key="seg_mt_shock_metal", format_func=lambda x: t("Cobre") if x == "cu" else t("Aluminio"))
+    pct = ci[1].number_input(t("Cambio %"), min_value=-50.0, max_value=100.0, value=10.0, step=5.0, key="mt_shock_pct")
+    imp = metal_impact(mt_sel, pct, m, gauges, horizon, ml)
+    dm = (imp["shock"]["margin"] - imp["base"]["margin"])
+    dr = (imp["shock"]["rev"] / imp["base"]["rev"] - 1) * 100 if imp["base"]["rev"] else 0.0
+    dv = (imp["shock"]["vol"] / imp["base"]["vol"] - 1) * 100 if imp["base"]["vol"] else 0.0
+    metal_name = t("el cobre") if mt_sel == "cu" else t("el aluminio")
+    verb_p = t("sube") if pct >= 0 else t("baja")
+    verb_m = t("baja") if dm < 0 else t("sube")
+    verb_r = t("sube") if dr >= 0 else t("baja")
+    st.html(f'<p class="headline" style="font-size:clamp(18px,2vw,24px);max-width:60ch">{esc(t("Si {m} {v1} {p}%, el margen {v2} {x} y la venta en pesos {v3} {r}%.", m=metal_name, v1=verb_p, p=f"{abs(pct):.0f}", v2=verb_m, x=ui.mxn(abs(dm)), v3=verb_r, r=f"{abs(dr):.1f}"))}</p>'
+            f'<p class="subline">{esc(t("Con traspaso de {pt}% del alza al precio de lista, el volumen cambia {dv}% por la señal del cobre.", pt=f"{sv("mt_pass", 50):.0f}", dv=f"{dv:+.2f}"))}</p>')
+
+    # recomendación de compra
+    st.html(ui.h2(t("¿Comprar ahora o después?"), t("Para cada mes de producción se elige el momento de compra de menor costo, considerando el camino de precios, el plan de producción y el costo de mantener inventario.")))
+    rows_cu = res.rows
+    for key, nm, now in (("cu", t("Cobre"), cu0), ("al", t("Aluminio"), al0)):
+        req = np.zeros(horizon)
+        for r in rows_cu.itertuples():
+            if r.metal == key:
+                req = req + np.asarray(r.metal_req)
+        if req.sum() <= 0:
+            continue
+        pp = [x * k for x in path[key]]
+        plan_b = MT.purchase_plan(req, now, pp, fx0, path["fx"], hold, ahead)
+        sched = plan_b["schedule"]
+        now_t = plan_b["buy_now"]
+        if now_t > 1e-6:
+            cov = next((s_["covers"] for s_ in sched if s_["t"] == 0), [])
+            head = t("{n}: compra hoy {x} t, que cubren {c}.", n=nm, x=f"{now_t:,.0f}", c=t("los meses {a} a {b}", a=min(cov), b=max(cov)) if len(cov) > 1 else t("el mes {a}", a=cov[0]))
         else:
-            with st.expander(t("Ver el camino mes por mes")):
-                st.html(ui.table(list(tbl.columns), [[r.iloc[0], f"{r.iloc[1]:,.0f}", f"{r.iloc[2]:,.0f}", f"{r.iloc[3]:.2f}"] for _, r in tbl.iterrows()], num=(1, 2, 3)))
+            head = t("{n}: compra mes a mes. El camino no justifica adelantar compras.", n=nm)
+        sav = plan_b["saving"]
+        st.html(f'<h3 style="margin:18px 0 4px;font-size:1.05em">{esc(head)}</h3>'
+                f'<p class="hint">{esc(t("Ahorro estimado contra comprar mes a mes: {x}. Costo recomendado {a}; mes a mes {b}; todo hoy {c}.", x=ui.mxn(sav), a=ui.mxn(plan_b["cost_opt"]), b=ui.mxn(plan_b["cost_jit"]), c=ui.mxn(plan_b["cost_now"])))}</p>')
+        lab = lambda tt: t("Hoy") if tt == 0 else mes_largo(months12[tt - 1])
+        st.html(ui.table([t("Momento de compra"), t("Toneladas"), t("Precio (USD/t)"), t("Cubre los meses")],
+                         [[lab(s_["t"]), f"{s_['tons']:,.1f}", f"{s_['price']:,.0f}", ", ".join(str(c) for c in s_["covers"])] for s_ in sched], num=(1, 2)))
+    st.html(f'<p class="syncnote">{esc(t("Simplificaciones: costo de mantener = porcentaje anual del valor, sin descuentos por volumen, coberturas ni límites de bodega. Los precios son ilustrativos hasta que captures los tuyos."))}</p>')
 
-        # impacto de un movimiento del precio
-        st.html(ui.h2(t("Si el precio del metal se mueve"), t("Compara el plan actual contra el mismo plan con el precio de un metal movido en todos los meses.")))
-        ci = st.columns([1.3, 1.2, 2.5], gap="large", vertical_alignment="bottom")
-        mt_sel = ci[0].radio(t("Metal"), ["cu", "al"], horizontal=True, key="seg_mt_shock_metal", format_func=lambda x: t("Cobre") if x == "cu" else t("Aluminio"))
-        pct = ci[1].number_input(t("Cambio %"), min_value=-50.0, max_value=100.0, value=10.0, step=5.0, key="mt_shock_pct")
-        imp = metal_impact(mt_sel, pct, m, gauges, horizon, ml)
-        dm = (imp["shock"]["margin"] - imp["base"]["margin"])
-        dr = (imp["shock"]["rev"] / imp["base"]["rev"] - 1) * 100 if imp["base"]["rev"] else 0.0
-        dv = (imp["shock"]["vol"] / imp["base"]["vol"] - 1) * 100 if imp["base"]["vol"] else 0.0
-        metal_name = t("el cobre") if mt_sel == "cu" else t("el aluminio")
-        verb_p = t("sube") if pct >= 0 else t("baja")
-        verb_m = t("baja") if dm < 0 else t("sube")
-        verb_r = t("sube") if dr >= 0 else t("baja")
-        st.html(f'<p class="headline" style="font-size:clamp(18px,2vw,24px);max-width:60ch">{esc(t("Si {m} {v1} {p}%, el margen {v2} {x} y la venta en pesos {v3} {r}%.", m=metal_name, v1=verb_p, p=f"{abs(pct):.0f}", v2=verb_m, x=ui.mxn(abs(dm)), v3=verb_r, r=f"{abs(dr):.1f}"))}</p>'
-                f'<p class="subline">{esc(t("Con traspaso de {pt}% del alza al precio de lista, el volumen cambia {dv}% por la señal del cobre.", pt=f"{sv("mt_pass", 50):.0f}", dv=f"{dv:+.2f}"))}</p>')
-
-        # recomendación de compra
-        st.html(ui.h2(t("¿Comprar ahora o después?"), t("Para cada mes de producción se elige el momento de compra de menor costo, considerando el camino de precios, el plan de producción y el costo de mantener inventario.")))
-        rows_cu = res.rows
-        for key, nm, now in (("cu", t("Cobre"), cu0), ("al", t("Aluminio"), al0)):
-            req = np.zeros(horizon)
-            for r in rows_cu.itertuples():
-                if r.metal == key:
-                    req = req + np.asarray(r.metal_req)
-            if req.sum() <= 0:
-                continue
-            pp = [x * k for x in path[key]]
-            plan_b = MT.purchase_plan(req, now, pp, fx0, path["fx"], hold, ahead)
-            sched = plan_b["schedule"]
-            now_t = plan_b["buy_now"]
-            if now_t > 1e-6:
-                cov = next((s_["covers"] for s_ in sched if s_["t"] == 0), [])
-                head = t("{n}: compra hoy {x} t, que cubren {c}.", n=nm, x=f"{now_t:,.0f}", c=t("los meses {a} a {b}", a=min(cov), b=max(cov)) if len(cov) > 1 else t("el mes {a}", a=cov[0]))
-            else:
-                head = t("{n}: compra mes a mes. El camino no justifica adelantar compras.", n=nm)
-            sav = plan_b["saving"]
-            st.html(f'<h3 style="margin:18px 0 4px;font-size:1.05em">{esc(head)}</h3>'
-                    f'<p class="hint">{esc(t("Ahorro estimado contra comprar mes a mes: {x}. Costo recomendado {a}; mes a mes {b}; todo hoy {c}.", x=ui.mxn(sav), a=ui.mxn(plan_b["cost_opt"]), b=ui.mxn(plan_b["cost_jit"]), c=ui.mxn(plan_b["cost_now"])))}</p>')
-            lab = lambda tt: t("Hoy") if tt == 0 else mes_largo(months12[tt - 1])
-            st.html(ui.table([t("Momento de compra"), t("Toneladas"), t("Precio (USD/t)"), t("Cubre los meses")],
-                             [[lab(s_["t"]), f"{s_['tons']:,.1f}", f"{s_['price']:,.0f}", ", ".join(str(c) for c in s_["covers"])] for s_ in sched], num=(1, 2)))
-        st.html(f'<p class="syncnote">{esc(t("Simplificaciones: costo de mantener = porcentaje anual del valor, sin descuentos por volumen, coberturas ni límites de bodega. Los precios son ilustrativos hasta que captures los tuyos."))}</p>')
-
-        # ¿ayuda el precio del metal al machine learning?
-        if adv():
-            st.html(ui.h2(t("Precio del metal en el machine learning")))
-            info = ml.get("exog") if ml else None
-            if hist is None:
-                st.html(f'<p class="hint">{esc(t("Sube un histórico de precios para probar si el precio del cobre y del aluminio mejora el machine learning. Solo se usa si baja el error de validación."))}</p>')
-            elif info is None:
-                st.html(f'<p class="hint">{esc(t("El histórico no cubre al menos 85% de los meses de ventas, así que no se pudo probar."))}</p>')
-            else:
-                verdict = t("Se conserva: mejora la validación.") if info["kept"] else t("No se usa: no mejora la validación.")
-                st.html(ui.kpis([(f"{info['err_without']:.1f}%", t("Error de validación sin el precio")), (f"{info['err_with']:.1f}%", t("Error de validación con el precio")),
-                                 (f"{info['windows_better']} / {info['windows']}", t("Ventanas donde mejora")), (verdict, t("Decisión"))]))
-                st.html(f'<p class="syncnote">{esc(t("Se prueba con la mejor configuración y se conserva solo si mejora al menos 0.25 puntos y en la mitad de las ventanas. Los precios futuros de cada ventana se suponen planos."))}</p>')
+    # ¿ayuda el precio del metal al machine learning?
+    if adv():
+        st.html(ui.h2(t("Precio del metal en el machine learning")))
+        info = ml.get("exog") if ml else None
+        if hist is None:
+            st.html(f'<p class="hint">{esc(t("Sube un histórico de precios para probar si el precio del cobre y del aluminio mejora el machine learning. Solo se usa si baja el error de validación."))}</p>')
+        elif info is None:
+            st.html(f'<p class="hint">{esc(t("El histórico no cubre al menos 85% de los meses de ventas, así que no se pudo probar."))}</p>')
+        else:
+            verdict = t("Se conserva: mejora la validación.") if info["kept"] else t("No se usa: no mejora la validación.")
+            st.html(ui.kpis([(f"{info['err_without']:.1f}%", t("Error de validación sin el precio")), (f"{info['err_with']:.1f}%", t("Error de validación con el precio")),
+                             (f"{info['windows_better']} / {info['windows']}", t("Ventanas donde mejora")), (verdict, t("Decisión"))]))
+            st.html(f'<p class="syncnote">{esc(t("Se prueba con la mejor configuración y se conserva solo si mejora al menos 0.25 puntos y en la mitad de las ventanas. Los precios futuros de cada ventana se suponen planos."))}</p>')
 
 
 # ================================================================== por qué el modelo pronostica esto (SHAP)
