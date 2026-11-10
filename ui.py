@@ -150,37 +150,128 @@ def engine_html(anim_on: bool) -> str:
     """Motor de animación: números que cuentan, destello de precios, trazo del pronóstico.
     También inyecta <link> de fuentes y CSS en el <head> del documento padre via JS."""
     import json as _json
-    # All JS must target window.parent.document — engine_html() is injected via
-    # st.html() which sandboxes the script inside an iframe; document alone
-    # refers to the iframe, not the Streamlit page.
+
+    # Resolve which document to target — works whether st.html runs in an
+    # iframe (try window.parent.document) or directly in the main document.
+    _pd = (
+        "var _pd;"
+        "try{_pd=window.parent?window.parent.document:document;}catch(e){_pd=document;}"
+    )
+
     font_js = (
         "(function(){"
-        "var pd=window.parent?window.parent.document:document;"
+        + _pd +
         "var fonts=["
         "'https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700;800&display=swap',"
         "'https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap'"
         "];"
         "fonts.forEach(function(href){"
-        "if(pd.querySelector('link[href=\"'+href+'\"]'))return;"
-        "var l=pd.createElement('link');l.rel='stylesheet';l.href=href;"
-        "(pd.head||pd.documentElement).appendChild(l);"
+        "if(_pd.querySelector('link[href=\"'+href+'\"]'))return;"
+        "var l=_pd.createElement('link');l.rel='stylesheet';l.href=href;"
+        "(_pd.head||_pd.documentElement).appendChild(l);"
         "});"
         "})();"
     )
+
     css_js = ""
     if _INJECT_CSS:
+        css_content = _json.dumps(_INJECT_CSS)
         css_js = (
             "(function(){"
-            "var pd=window.parent?window.parent.document:document;"
-            "var s=pd.getElementById('vk-css');"
-            "if(!s){s=pd.createElement('style');s.id='vk-css';"
-            "(pd.head||pd.documentElement).appendChild(s);}"
-            f"s.textContent={_json.dumps(_INJECT_CSS)};"
+            + _pd +
+            "var _hd=_pd.head||_pd.documentElement;"
+            "function _injectCSS(){"
+            "var s=_pd.getElementById('vk-css');"
+            "if(!s){s=_pd.createElement('style');s.id='vk-css';_hd.appendChild(s);}"
+            "else if(s!==_hd.lastElementChild){_hd.appendChild(s);}"  # keep at end
+            f"s.textContent={css_content};"
+            "}"
+            "_injectCSS();"
+            # Re-append vk-css to end of head whenever emotion inserts a new style
+            "new MutationObserver(function(ms){"
+            "ms.forEach(function(m){"
+            "m.addedNodes.forEach(function(n){"
+            "if(n.nodeName==='STYLE'&&n.id!=='vk-css')_injectCSS();"
+            "});"
+            "});"
+            "}).observe(_hd,{childList:true});"
             "})();"
         )
+
+    # Icon fix: apply Material Symbols font to elements that contain only an icon ligature name
+    icon_set_js = _json.dumps([
+        'expand_more','expand_less','arrow_drop_down','arrow_drop_up',
+        'keyboard_arrow_down','keyboard_arrow_up','keyboard_arrow_right','keyboard_arrow_left',
+        'close','check','upload','help','settings','info','warning','error',
+        'more_horiz','more_vert','menu','search','add','remove','delete','refresh',
+        'download','chevron_right','chevron_left','open_in_new','dark_mode','light_mode',
+        'palette','notifications','table_rows','bar_chart','star','tune','layers',
+        'inventory_2','account_circle','manage_accounts','fact_check','lock','lock_open',
+        'visibility','visibility_off','edit','content_copy','done','done_all',
+        'arrow_forward','arrow_back','north','south','east','west',
+        'keyboard_return','send','attach_file','link','calendar_today','schedule',
+        'trending_up','trending_down','trending_flat','show_chart','analytics',
+    ])
+    icon_js = (
+        "(function(){"
+        + _pd +
+        f"var _ICONS={icon_set_js};"
+        "var _IS={}; _ICONS.forEach(function(x){_IS[x]=1;});"
+        "function _fixIcons(root){"
+        "root.querySelectorAll('span,i').forEach(function(el){"
+        "if(el.children.length>0)return;"
+        "var t=(el.textContent||'').trim();"
+        "if(!t||!_IS[t])return;"
+        "var ff=getComputedStyle(el).fontFamily;"
+        "if(ff.indexOf('Material')>=0)return;"
+        "el.style.setProperty('font-family',\"'Material Symbols Rounded','Material Icons\",'important');"
+        "el.style.setProperty('font-variation-settings',\"'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 24\",'important');"
+        "el.style.setProperty('line-height','1','important');"
+        "el.style.setProperty('letter-spacing','0','important');"
+        "el.style.setProperty('text-transform','none','important');"
+        "el.style.setProperty('font-size','inherit','important');"
+        "});"
+        "}"
+        "var _ip=false;"
+        "function _si(){"
+        "if(_ip)return;_ip=true;"
+        "requestAnimationFrame(function(){_ip=false;_fixIcons(_pd.body||_pd.documentElement);});"
+        "}"
+        "_si();"
+        "new MutationObserver(_si).observe(_pd.body||_pd.documentElement,{childList:true,subtree:true});"
+        "})();"
+    )
+
+    # Toggle vk-dark / vk-light class on <body> so CSS rules in styles.css
+    # can target dark mode without needing inline-style injection.
+    dark_widget_js = (
+        "(function(){"
+        + _pd +
+        "function _isLight(c){"
+        "if(!c||c==='transparent'||c==='rgba(0, 0, 0, 0)')return false;"
+        "var m=c.match(/[\\d.]+/g);"
+        "if(!m||m.length<3)return false;"
+        "return(0.299*(+m[0])+0.587*(+m[1])+0.114*(+m[2]))/255>0.4;"
+        "}"
+        "var _prev=null;"
+        "function _sync(){"
+        "var bg=getComputedStyle(_pd.documentElement).getPropertyValue('--bg').trim();"
+        "if(!bg)return;"
+        "var isDark=!_isLight(bg);"
+        "if(isDark===_prev)return;"
+        "_prev=isDark;"
+        "var b=_pd.body;if(!b)return;"
+        "b.classList.toggle('vk-dark',isDark);"
+        "b.classList.toggle('vk-light',!isDark);"
+        "}"
+        "_sync();"
+        "setInterval(_sync,300);"
+        "})();"
+    )
+
     js_body = ENGINE_JS.strip().removeprefix("<script>").removesuffix("</script>").strip()
     return (f'<div id="vk-cfg" data-anim="{"on" if anim_on else "off"}" style="display:none"></div>'
-            f'<script>{font_js}{css_js}{js_body}</script>')
+            f'<script>{font_js}{css_js}{icon_js}{dark_widget_js}{js_body}</script>')
 
 
 
@@ -445,7 +536,8 @@ COMPARE_STYLE = [(BLUE, "dash"), ("#8a8a8a", "dashdot"), ("#2d7fb8", "longdash")
 def _layout(height, legend=True, **kw):
     """Diseño común: fondo transparente (se ve el fondo de la página), tipografía y tooltip del tema."""
     d = dict(height=height, plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(family=FONT, color=MUTED, size=12),
-             hoverlabel=dict(bgcolor=FG, font=dict(color=BG, family=FONT)))
+             hoverlabel=dict(bgcolor=SOFT, font=dict(color=FG, family=FONT), bordercolor=LINE),
+             uirevision="stable")
     if legend:
         d["legend"] = dict(orientation="h", y=-0.12, yanchor="top", x=0, xanchor="left",
                            font=dict(size=12, color=FG), bgcolor="rgba(0,0,0,0)", borderwidth=0)

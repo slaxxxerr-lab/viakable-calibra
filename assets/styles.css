@@ -19,9 +19,9 @@
 
 /* ── 2. Base ────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing:border-box; }
-.stApp, .stApp *:not([class*="material-symbols"]):not([class*="material-icon"]) { font-family:var(--font)!important; }
+.stApp, .stApp *:not([class*="material-symbols"]):not([class*="material-icon"]):not([data-testid*="Icon"]):not([data-testid*="icon"]) { font-family:var(--font)!important; }
 /* Restore icon font after the broad override above */
-[class*="material-symbols"],[class*="material-icon"] { font-family:'Material Symbols Rounded','Material Icons'!important; }
+[class*="material-symbols"],[class*="material-icon"],[data-testid*="Icon"],[data-testid*="icon"] { font-family:'Material Symbols Rounded','Material Icons'!important; }
 .stApp, [data-testid="stAppViewContainer"],
 [data-testid="stMain"], section.main { background:var(--bg)!important; }
 [data-testid="stHeader"] { background:var(--bg)!important; box-shadow:none!important; }
@@ -687,3 +687,83 @@ code { background-color:var(--surface-2)!important; color:var(--fg)!important; }
 
 /* ── W. Text selection ──────────────────────────────────────── */
 ::selection { background:var(--accent-soft); }
+
+/* ═══ §26 BUTTON & GENERAL WIDGET OVERRIDES ═══════════════════
+   These rules target Streamlit's compiled emotion CSS which uses
+   base="light" colors (hardcoded). CSS vars carry the right value
+   for each theme; !important beats unlayered emotion rules.
+   .vk-dark class (toggled by engine_html JS) adds extra specificity
+   as backup when emotion injects after our style tag. */
+
+/* ── Button: st.button(), form submit, base button variants ── */
+[data-testid="stButton"] button,
+[data-testid="stFormSubmitButton"] button,
+[data-testid="stBaseButton-secondary"],
+[data-testid="stBaseButton-primary"],
+[data-testid="stBaseButton-tertiary"],
+[data-testid="stPageLink"] button {
+  background-color:var(--surface-2)!important;
+  color:var(--fg)!important;
+  border-color:var(--line)!important;
+}
+
+/* ── Popover trigger and other header/toolbar buttons ─────── */
+[data-testid="stPopover"] button,
+[data-testid="stHeader"] button,
+[data-testid="stSidebar"] button:not([data-testid="stThemeToggle"]) {
+  background-color:var(--surface-2)!important;
+  color:var(--fg)!important;
+  border-color:var(--line)!important;
+}
+
+/* ── .vk-dark fallback: catch-all for any uncovered button ── */
+body.vk-dark button:not([data-testid="stThemeToggle"]):not([aria-selected="true"]):not([aria-pressed="true"]) {
+  background-color:var(--surface-2)!important;
+  color:var(--fg)!important;
+  border-color:var(--line)!important;
+}
+
+/* ── .vk-dark input / textarea ───────────────────────────── */
+body.vk-dark input:not([type="range"]),
+body.vk-dark textarea {
+  background-color:var(--soft)!important;
+  color:var(--fg)!important;
+  border-color:var(--line)!important;
+}
+
+/* ── .vk-dark selectbox/multiselect control ──────────────── */
+body.vk-dark [data-baseweb="select"] > div:first-child,
+body.vk-dark [data-baseweb="input"] > div,
+body.vk-dark [data-baseweb="textarea"] > div {
+  background-color:var(--soft)!important;
+  border-color:var(--line)!important;
+  color:var(--fg)!important;
+}
+
+/* ── .vk-dark segmented control / nav ───────────────────── */
+body.vk-dark [data-testid="stSegmentedControl"] > div {
+  background-color:var(--surface-2)!important;
+  border-color:var(--line)!important;
+}
+
+/* ── .vk-dark popover / menu portal ─────────────────────── */
+body.vk-dark [data-baseweb="popover"],
+body.vk-dark [data-baseweb="menu"] {
+  background-color:var(--surface-2)!important;
+  border-color:var(--line)!important;
+}
+body.vk-dark [data-baseweb="option"] {
+  background-color:var(--surface-2)!important;
+  color:var(--fg)!important;
+}
+body.vk-dark [data-baseweb="option"]:hover,
+body.vk-dark [data-baseweb="option"][aria-selected="true"] {
+  background-color:var(--soft)!important;
+}
+
+/* ── .vk-dark labels and general text ───────────────────── */
+body.vk-dark label,
+body.vk-dark [data-testid*="Label"] p,
+body.vk-dark [data-testid="stWidgetLabel"] p {
+  color:var(--fg)!important;
+}
