@@ -5662,6 +5662,7 @@ ADV_ONLY = {"Señales", "Laboratorio", "Equipo", "Riesgo"}
 
 
 def main():
+    store()["_nav_tab_before_sync"] = store().get("nav_tab", "Hoy")
     sync_store()
     _t_live = time.perf_counter()
     try:
@@ -5749,7 +5750,7 @@ def main():
                 "Hoy": t("Hoy"), "Pronóstico": t("Pronóstico"),
                 "Compras de metal": t("Compras de metal"), "Clientes": t("Clientes"),
             }
-            _prev_tab = store().get("nav_tab", "Hoy")
+            _prev_tab = store().get("_nav_tab_before_sync", "Hoy")
             _chosen_tab = st.segmented_control(
                 t("Nav"), _NAV_MAIN,
                 default=store().get("nav_tab", "Hoy"),
