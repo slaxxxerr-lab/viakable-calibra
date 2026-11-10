@@ -1,0 +1,53 @@
+============================================================
+VIAKABLE CALIBRA — THEME CHECK REPORT
+============================================================
+
+── CSS Injection Health ──
+  [FAIL] Hoy / light: styleExists=False len=0 --bg='#F3F3F3' --fg='#0A0A0A'
+  [FAIL] Hoy / dark: styleExists=False len=0 --bg='#0B0B0C' --fg='#F5F5F5'
+  [FAIL] Pronóstico / light: styleExists=False len=0 --bg='#F3F3F3' --fg='#0A0A0A'
+  [FAIL] Pronóstico / dark: styleExists=False len=0 --bg='#0B0B0C' --fg='#F5F5F5'
+  [FAIL] Compras de metal / light: styleExists=False len=0 --bg='#F3F3F3' --fg='#0A0A0A'
+  [FAIL] Compras de metal / dark: styleExists=False len=0 --bg='#0B0B0C' --fg='#F5F5F5'
+  [FAIL] Clientes / light: styleExists=False len=0 --bg='#F3F3F3' --fg='#0A0A0A'
+  [FAIL] Clientes / dark: styleExists=False len=0 --bg='#0B0B0C' --fg='#F5F5F5'
+
+── Total failures: 352 ──
+  CONTRAST: 192
+  LIGHT_WIDGETS_DARK: 160
+
+── By page/theme ──
+  Hoy / dark: 83
+  Pronóstico / dark: 83
+  Compras de metal / dark: 83
+  Clientes / dark: 83
+  Hoy / light: 5
+  Pronóstico / light: 5
+  Compras de metal / light: 5
+  Clientes / light: 5
+
+── Top 20 failures ──
+  1. [CONTRAST] Hoy/light | BUTTON 'Hoy' fg=rgb(255, 0, 0) bg=rgb(255,0,0,0.1) ratio=1.00
+  2. [CONTRAST] Hoy/light | SPAN 'Hoy' fg=rgb(255, 0, 0) bg=rgb(255,0,0,0.1) ratio=1.00
+  3. [CONTRAST] Hoy/light | P 'Hoy' fg=rgb(255, 0, 0) bg=rgb(255,0,0,0.1) ratio=1.00
+  4. [CONTRAST] Hoy/light | SPAN 'Precios 13:45 (guardado)' fg=rgb(245, 158, 11) bg=rgb(243,243,243,1) ratio=1.94
+  5. [CONTRAST] Hoy/light | SPAN 'Paso 1 de 10' fg=rgb(255, 0, 0) bg=rgb(243,243,243,1) ratio=3.60
+  6. [LIGHT_WIDGETS_DARK] Hoy/dark | sel=button:not([data-testid="stThemeToggle"]) bg=rgb(243, 243, 243) lum=0.953
+  7. [LIGHT_WIDGETS_DARK] Hoy/dark | sel=button:not([data-testid="stThemeToggle"]) bg=rgb(243, 243, 243) lum=0.953
+  8. [LIGHT_WIDGETS_DARK] Hoy/dark | sel=button:not([data-testid="stThemeToggle"]) bg=rgb(243, 243, 243) lum=0.953
+  9. [LIGHT_WIDGETS_DARK] Hoy/dark | sel=button:not([data-testid="stThemeToggle"]) bg=rgb(255, 255, 255) lum=1.000
+  10. [LIGHT_WIDGETS_DARK] Hoy/dark | sel=button:not([data-testid="stThemeToggle"]) bg=rgb(255, 255, 255) lum=1.000
+  11. [LIGHT_WIDGETS_DARK] Hoy/dark | sel=button:not([data-testid="stThemeToggle"]) bg=rgb(255, 255, 255) lum=1.000
+  12. [LIGHT_WIDGETS_DARK] Hoy/dark | sel=button:not([data-testid="stThemeToggle"]) bg=rgb(255, 255, 255) lum=1.000
+  13. [LIGHT_WIDGETS_DARK] Hoy/dark | sel=button:not([data-testid="stThemeToggle"]) bg=rgb(255, 255, 255) lum=1.000
+  14. [LIGHT_WIDGETS_DARK] Hoy/dark | sel=button:not([data-testid="stThemeToggle"]) bg=rgb(255, 255, 255) lum=1.000
+  15. [LIGHT_WIDGETS_DARK] Hoy/dark | sel=button:not([data-testid="stThemeToggle"]) bg=rgb(255, 255, 255) lum=1.000
+  16. [LIGHT_WIDGETS_DARK] Hoy/dark | sel=button:not([data-testid="stThemeToggle"]) bg=rgb(255, 255, 255) lum=1.000
+  17. [LIGHT_WIDGETS_DARK] Hoy/dark | sel=button:not([data-testid="stThemeToggle"]) bg=rgb(255, 255, 255) lum=1.000
+  18. [LIGHT_WIDGETS_DARK] Hoy/dark | sel=button:not([data-testid="stThemeToggle"]) bg=rgb(255, 255, 255) lum=1.000
+  19. [LIGHT_WIDGETS_DARK] Hoy/dark | sel=button:not([data-testid="stThemeToggle"]) bg=rgb(255, 255, 255) lum=1.000
+  20. [LIGHT_WIDGETS_DARK] Hoy/dark | sel=button:not([data-testid="stThemeToggle"]) bg=rgb(255, 255, 255) lum=1.000
+
+============================================================
+RESULT: FAIL — 352 issue(s)
+============================================================
