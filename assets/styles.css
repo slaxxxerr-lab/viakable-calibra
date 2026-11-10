@@ -14,7 +14,9 @@
   --xs:.6875rem; --sm:.8125rem; --md:.9375rem; --lg:1.0625rem; --xl:1.25rem; --kpi:2.4rem;
   --dur:160ms; --ease:cubic-bezier(.4,0,.2,1);
   --ok:#22c55e; --ok-bg:rgba(34,197,94,.12);
-  --warn:#f59e0b; --warn-bg:rgba(245,158,11,.12);
+  /* --warn and --warn-bg are set by ui.py PAL_L/PAL_D so they are theme-aware.
+     Defining them here would override those values (body comes after dyn in
+     the injected <style> cascade). They are intentionally absent from this block. */
 }
 
 /* ── 2. Base ────────────────────────────────────────────── */
@@ -786,7 +788,11 @@ label,
 }
 
 /* ── File uploader dropzone ────────────────────────────── */
-[data-testid="stFileUploaderDropzone"],
-[data-testid="stFileUploaderDropzone"] * {
+/* Two-attribute selector gives specificity (0,2,1) to beat Emotion's .css-xyz h3 */
+[data-testid="stMain"] [data-testid="stFileUploaderDropzone"] h3,
+[data-testid="stMain"] [data-testid="stFileUploaderDropzone"] h4,
+[data-testid="stMain"] [data-testid="stFileUploaderDropzone"] p,
+[data-testid="stMain"] [data-testid="stFileUploaderDropzone"] span,
+[data-testid="stMain"] [data-testid="stFileUploaderDropzone"] div {
   color:var(--fg)!important;
 }
