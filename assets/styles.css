@@ -787,12 +787,12 @@ label,
   border-color:var(--line)!important;
 }
 
-/* ── File uploader dropzone ────────────────────────────── */
-/* Two-attribute selector gives specificity (0,2,1) to beat Emotion's .css-xyz h3 */
-[data-testid="stMain"] [data-testid="stFileUploaderDropzone"] h3,
-[data-testid="stMain"] [data-testid="stFileUploaderDropzone"] h4,
-[data-testid="stMain"] [data-testid="stFileUploaderDropzone"] p,
-[data-testid="stMain"] [data-testid="stFileUploaderDropzone"] span,
-[data-testid="stMain"] [data-testid="stFileUploaderDropzone"] div {
+/* ── st.html() bare headings and paragraphs ────────────── */
+/* st.html() content inherits Streamlit's light-theme text color; override
+   with the token so dark-mode works. Elements with explicit class/style
+   are unaffected by specificity rules or their own inline declarations. */
+[data-testid="stFileUploaderDropzone"] h3,
+[data-testid="stFileUploaderDropzone"] p,
+[data-testid="stFileUploaderDropzone"] span {
   color:var(--fg)!important;
 }

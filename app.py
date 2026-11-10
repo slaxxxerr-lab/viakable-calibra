@@ -5640,7 +5640,9 @@ def tour_card():
     _, _, title, text = steps[i]
     last = i == len(steps) - 1
     with st.container(key="tour"):
-        st.html(f'<span class="tour-step">{esc(t("Paso {a} de {b}", a=i + 1, b=len(steps)))}</span><h3>{esc(t(title))}</h3><p>{esc(t(text))}</p>')
+        st.html(f'<span class="tour-step">{esc(t("Paso {a} de {b}", a=i + 1, b=len(steps)))}</span>'
+                f'<h3 style="color:var(--fg)">{esc(t(title))}</h3>'
+                f'<p style="color:var(--fg)">{esc(t(text))}</p>')
         c = st.columns([1, 1, 1])
         if i > 0:
             c[0].button(t("Anterior"), key="tour_prev", on_click=tour_go, args=(-1,))
