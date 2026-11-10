@@ -59,7 +59,7 @@ LIGHT_WIDGETS_JS = """
         if (!c) return null;
         c = c.trim();
         if (c.startsWith('rgb')) {
-            const m = c.match(/[\d.]+/g);
+            const m = c.match(/[\\d.]+/g);
             if (!m || m.length < 3) return null;
             return [+m[0], +m[1], +m[2]];
         }
@@ -196,7 +196,7 @@ CONTRAST_JS = """
 () => {
     function parseRGBA(c) {
         if (!c) return null;
-        const m = c.match(/[\d.]+/g);
+        const m = c.match(/[\\d.]+/g);
         if (!m || m.length < 3) return null;
         return [+m[0], +m[1], +m[2], m[3] !== undefined ? +m[3] : 1];
     }
@@ -272,6 +272,8 @@ CONTRAST_JS = """
         if (cs.display === 'none' || cs.visibility === 'hidden') return;
         const text = el.textContent.trim();
         if (!text || text.length < 2) return;
+        // Skip emoji-only text: emojis render as graphical glyphs, ignoring CSS color
+        if (!/[a-zA-ZÀ-ž0-9]/.test(text)) return;
         const fgRGBA = parseRGBA(cs.color);
         if (!fgRGBA) return;
         // Composite fg alpha against resolved background

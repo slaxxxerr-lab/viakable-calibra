@@ -26,6 +26,7 @@ PAL_L = {
     "tile-border-color": "transparent",
     "shadow-tile": "0 12px 32px rgba(0,0,0,.06),0 2px 6px rgba(0,0,0,.04)",
     "shadow-sm": "0 2px 8px rgba(0,0,0,.07),0 1px 3px rgba(0,0,0,.04)",
+    "warn": "#92400E", "warn-bg": "rgba(146,64,14,.12)",
 }
 PAL_D = {
     "bg": "#0B0B0C", "fg": "#F5F5F5", "muted": "#B4B4B4", "line": "#26262A",
@@ -35,6 +36,7 @@ PAL_D = {
     "tile-border-color": "rgba(255,255,255,.06)",
     "shadow-tile": "0 2px 12px rgba(0,0,0,.35)",
     "shadow-sm": "0 1px 4px rgba(0,0,0,.3)",
+    "warn": "#FBBF24", "warn-bg": "rgba(251,191,36,.12)",
 }
 FONTS = {"brand": '"Inter Tight","Aeonik","Aptos","Manrope",system-ui,-apple-system,"Segoe UI",sans-serif',
          "manrope": '"Manrope",system-ui,sans-serif', "plex": '"IBM Plex Sans",system-ui,sans-serif',

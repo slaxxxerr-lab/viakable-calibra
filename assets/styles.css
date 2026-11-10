@@ -186,7 +186,7 @@ div.newstags { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; }
 div.newsnote { background:var(--bg); border-radius:var(--r-sm); padding:12px; margin:8px 0; font-size:var(--sm); border:1px solid var(--line); }
 
 /* ── 14. Misc ─────────────────────────────────────────────  */
-span.tour-step { display:inline-block; font-size:var(--xs); font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--accent); margin-bottom:8px; }
+span.tour-step { display:inline-block; font-size:var(--xs); font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin-bottom:8px; }
 @keyframes vk-draw-anim { from{stroke-dashoffset:1} to{stroke-dashoffset:0} }
 .vk-draw { stroke-dasharray:1; stroke-dashoffset:1; animation:vk-draw-anim 1.8s var(--ease) forwards; }
 .vk-first { overflow:hidden; }
@@ -783,4 +783,10 @@ label,
 [data-testid="stExpanderDetails"] {
   background-color:var(--surface-2)!important;
   border-color:var(--line)!important;
+}
+
+/* ── File uploader dropzone ────────────────────────────── */
+[data-testid="stFileUploaderDropzone"],
+[data-testid="stFileUploaderDropzone"] * {
+  color:var(--fg)!important;
 }
