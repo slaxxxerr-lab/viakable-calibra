@@ -395,11 +395,21 @@ div.kpi {
   border:1px solid var(--line)!important;
   min-width:36px!important; height:36px!important;
   padding:0 10px!important;
-  font-size:15px!important;
+  font-size:20px!important;
   box-shadow:var(--shadow-sm)!important;
   color:var(--fg)!important;
-  font-weight:600!important;
+  font-weight:400!important;
 }
+/* Hide the auto-added expand_more/expand_less chevron from trigger */
+[data-testid="stPopoverButton"] [data-testid="stIconMaterial"] { display:none!important; }
+/* Force Material Symbols on trigger <p>; vk-css is always last in <head> so !important wins */
+[data-testid="stPopoverButton"] p {
+  font-family:'Material Symbols Rounded','Material Icons'!important;
+  font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 24!important;
+  font-size:20px!important; line-height:1!important;
+  letter-spacing:0!important; text-transform:none!important;
+}
+[data-testid="stPopoverButton"] { font-size:20px!important; }
 
 /* Primary black pill button */
 [data-testid="baseButton-primary"] {
@@ -483,31 +493,70 @@ div.kpi {
 }
 
 /* ── §23 · Popover secondary nav ────────────────────────── */
-[data-testid="stPopover"] [data-testid="stPopoverBody"] {
+[data-testid="stPopoverBody"] {
   background:var(--soft)!important;
-  border-radius:16px!important;
+  border-radius:18px!important;
   border:1px solid var(--line)!important;
   box-shadow:var(--shadow-tile)!important;
   padding:8px!important;
-  min-width:200px!important;
+  min-width:220px!important;
 }
-[data-testid="stPopover"] [data-testid="stPopoverBody"] button {
-  border-radius:999px!important;
-  border:none!important;
-  background:transparent!important;
-  color:var(--fg)!important;
-  font-weight:600!important;
-  font-size:13px!important;
-  text-align:left!important;
-  width:100%!important;
-  padding:8px 16px!important;
+/* Menu rows — higher specificity to override §26 catch-all */
+[data-testid="stPopoverBody"] button[data-testid="baseButton-secondary"],
+[data-testid="stPopoverBody"] button[data-testid="baseButton-primary"] {
+  display:flex!important; align-items:center!important; gap:10px!important;
+  height:40px!important; border-radius:12px!important;
+  border:none!important; background:transparent!important;
+  color:var(--fg)!important; font-weight:500!important;
+  font-size:13px!important; text-align:left!important;
+  width:100%!important; padding:0 12px!important;
+  box-shadow:none!important;
 }
-[data-testid="stPopover"] [data-testid="stPopoverBody"] button:hover {
+[data-testid="stPopoverBody"] button[data-testid="baseButton-secondary"]:hover,
+[data-testid="stPopoverBody"] button[data-testid="baseButton-primary"]:hover {
   background:var(--surface-2)!important;
 }
-[data-testid="stPopover"] [data-testid="stPopoverBody"] hr {
-  border-color:var(--line)!important;
-  margin:6px 0!important;
+[data-testid="stPopoverBody"] hr {
+  border:none!important;
+  border-top:1px solid var(--line)!important;
+  margin:4px 0!important;
+}
+/* Menu section heading */
+.vk-menu-group {
+  font-size:10px!important; font-weight:700!important;
+  letter-spacing:.08em!important; color:var(--muted)!important;
+  text-transform:uppercase!important; padding:8px 12px 4px!important;
+  display:block!important;
+}
+/* Selected segmented control in popover — WCAG AA: dark text on accent bg */
+[data-testid="stPopoverBody"] [data-testid="stSegmentedControl"] button[aria-selected="true"],
+[data-testid="stPopoverBody"] [data-testid="stSegmentedControl"] button[aria-selected="true"] *,
+[data-testid="stPopoverBody"] button[aria-selected="true"],
+[data-testid="stPopoverBody"] button[aria-selected="true"] * {
+  color:#000000!important;
+}
+/* Icons before each menu button (Material Symbols ligature via ::before) */
+.st-key-nav_sec_Datos button::before        { content:"storage"; }
+.st-key-nav_sec_Noticias button::before     { content:"notifications_active"; }
+.st-key-nav_sec_Laboratorio button::before  { content:"science"; }
+.st-key-nav_sec_Equipo button::before       { content:"group"; }
+.st-key-nav_sec_Ajustes button::before      { content:"tune"; }
+.st-key-btn_present button::before          { content:"slideshow"; }
+.st-key-btn_tour button::before             { content:"help"; }
+.st-key-reset_btn button::before            { content:"restart_alt"; }
+.st-key-nav_sec_Datos button::before,
+.st-key-nav_sec_Noticias button::before,
+.st-key-nav_sec_Laboratorio button::before,
+.st-key-nav_sec_Equipo button::before,
+.st-key-nav_sec_Ajustes button::before,
+.st-key-btn_present button::before,
+.st-key-btn_tour button::before,
+.st-key-reset_btn button::before {
+  font-family:'Material Symbols Rounded'!important;
+  font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 20!important;
+  font-size:18px!important; color:var(--muted)!important;
+  letter-spacing:0!important; line-height:1!important;
+  text-transform:none!important; flex-shrink:0!important;
 }
 
 /* ── §24 · Responsive ────────────────────────────────────── */
@@ -756,8 +805,11 @@ code { background-color:var(--surface-2)!important; color:var(--fg)!important; }
 /* ── Popover / menu portal (BaseWeb) ──────────────────────── */
 [data-baseweb="popover"],
 [data-baseweb="menu"] {
-  background-color:var(--surface-2)!important;
-  border-color:var(--line)!important;
+  background-color:var(--soft)!important;
+  border:1px solid var(--line)!important;
+  border-radius:18px!important;
+  box-shadow:var(--shadow-tile)!important;
+  overflow:hidden!important;
 }
 [data-baseweb="option"] {
   background-color:var(--surface-2)!important;

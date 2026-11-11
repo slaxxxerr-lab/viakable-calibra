@@ -220,7 +220,7 @@ def engine_html(anim_on: bool) -> str:
         f"var _ICONS={icon_set_js};"
         "var _IS={}; _ICONS.forEach(function(x){_IS[x]=1;});"
         "function _fixIcons(root){"
-        "root.querySelectorAll('span,i').forEach(function(el){"
+        "root.querySelectorAll('span,i,p').forEach(function(el){"
         "if(el.children.length>0)return;"
         "var t=(el.textContent||'').trim();"
         "if(!t||!_IS[t])return;"
@@ -271,9 +271,36 @@ def engine_html(anim_on: bool) -> str:
         "})();"
     )
 
+    # Fix WCAG contrast for selected segmented-control buttons inside popovers:
+    # Streamlit injects color:accent on selected buttons via its own component CSS
+    # (injected after our stylesheet); JS inline-style wins the cascade.
+    popover_contrast_js = (
+        "(function(){"
+        + _pd +
+        "function _fixSeg(root){"
+        "var bodies=root.querySelectorAll?root.querySelectorAll('[data-testid=\"stPopoverBody\"]'):[];"
+        "if(root.getAttribute&&root.getAttribute('data-testid')==='stPopoverBody'){"
+        "bodies=[root];}"
+        "bodies.forEach(function(body){"
+        "body.querySelectorAll('button[aria-selected=\"true\"],button[aria-pressed=\"true\"]').forEach(function(btn){"
+        "btn.style.setProperty('color','#000000','important');"
+        "btn.querySelectorAll('*').forEach(function(el){"
+        "el.style.setProperty('color','#000000','important');});"
+        "});});"
+        "}"
+        "var _pp=false;"
+        "function _sp(){"
+        "if(_pp)return;_pp=true;"
+        "requestAnimationFrame(function(){_pp=false;_fixSeg(_pd.body||_pd.documentElement);});"
+        "}"
+        "_sp();"
+        "new MutationObserver(_sp).observe(_pd.body||_pd.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['aria-selected','aria-pressed']});"
+        "})();"
+    )
+
     js_body = ENGINE_JS.strip().removeprefix("<script>").removesuffix("</script>").strip()
     return (f'<div id="vk-cfg" data-anim="{"on" if anim_on else "off"}" style="display:none"></div>'
-            f'<script>{font_js}{css_js}{icon_js}{dark_widget_js}{js_body}</script>')
+            f'<script>{font_js}{css_js}{icon_js}{dark_widget_js}{popover_contrast_js}{js_body}</script>')
 
 
 

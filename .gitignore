@@ -51,6 +51,9 @@ streamlit.log.txt
 resultados_motor.json
 resultados_modelos.json
 
+# Visual test artifacts (screenshots and run reports; not versioned)
+tests/visual/out/
+
 # Mac launcher (not needed on the cloud)
 iniciar.command
 arreglar_openmp_mac.sh

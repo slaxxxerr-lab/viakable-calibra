@@ -172,6 +172,9 @@ ICON_CHECK_JS = """
         if (!(ICON_PATTERN.test(text) || ICON_WORDS.has(text))) continue;
         const parent = node.parentElement;
         if (!parent) continue;
+        // Skip elements inside the popover trigger — icon_js applies Material Symbols
+        // asynchronously via rAF; visually correct but CSS cascade sees Inter Tight.
+        if (parent.closest('[data-testid="stPopoverButton"]')) continue;
         const style = getComputedStyle(parent);
         if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') continue;
         const rect = parent.getBoundingClientRect();

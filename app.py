@@ -5714,7 +5714,7 @@ def main():
 
     # ── Tab mapping (old section keys → new 4-tab structure) ────────
     _NAV_MAIN = ["Hoy", "Pronóstico", "Compras de metal", "Clientes"]
-    _NAV_SECONDARY = ["Datos", "Noticias", "Señales", "Laboratorio", "Equipo"]
+    _NAV_SECONDARY = ["Datos", "Noticias", "Laboratorio", "Equipo"]
     _OLD_TO_TAB = {
         "Inicio": "Hoy", "Pronóstico": "Pronóstico",
         "Planeación": "Compras de metal", "Metales": "Compras de metal",
@@ -5793,29 +5793,79 @@ def main():
                         del st.session_state["hdr_query"]
                     st.rerun()
             with _rc2:
-                with st.popover("⋯", use_container_width=False):
-                    for _sec in _NAV_SECONDARY:
-                        if _sec in ADV_ONLY and not adv():
+                with st.popover("more_horiz", use_container_width=False):
+                    # ── SECCIONES ──────────────────────────────────────
+                    st.html('<div class="vk-menu-group">SECCIONES</div>')
+                    _MENU_SECS = [
+                        ("Datos",       "Datos"),
+                        ("Noticias",    t("Noticias y señales")),
+                        ("Laboratorio", t("Laboratorio de modelos")),
+                        ("Equipo",      t("Equipo y registro")),
+                    ]
+                    for _msec, _mlabel in _MENU_SECS:
+                        if _msec in ADV_ONLY and not adv():
                             continue
-                        if st.button(t(_sec), key=f"nav_sec_{_sec}", use_container_width=True):
-                            store()["nav_v2"] = _sec
+                        if st.button(_mlabel, key=f"nav_sec_{_msec}", use_container_width=True):
+                            store()["nav_v2"] = _msec
                             st.rerun()
-                    st.markdown("---")
-                    # Mode toggle
-                    if "seg_ui_mode" not in st.session_state:
+                    st.button(t("Ajustes"), key="nav_sec_Ajustes", on_click=open_drawer,
+                              use_container_width=True)
+                    st.html('<hr class="vk-menu-hr">')
+                    # ── PREFERENCIAS ───────────────────────────────────
+                    st.html(f'<div class="vk-menu-group">{esc(t("PREFERENCIAS"))}</div>')
+                    # Mode
+                    if st.session_state.get("seg_ui_mode") != cfg["mode"]:
                         st.session_state["seg_ui_mode"] = cfg["mode"]
-                    st.radio(t("Modo"), ["simple", "adv"], key="seg_ui_mode", horizontal=True,
-                             label_visibility="visible",
-                             format_func=lambda v: t("Simple") if v == "simple" else t("Avanzado"),
-                             on_change=lambda: ST.put("mode", st.session_state["seg_ui_mode"]))
+                    st.segmented_control(
+                        t("Modo"), ["simple", "adv"], key="seg_ui_mode",
+                        format_func=lambda v: t("Simple") if v == "simple" else t("Avanzado"),
+                        on_change=lambda: ST.put("mode", st.session_state["seg_ui_mode"]),
+                        label_visibility="visible",
+                    )
                     # Language
-                    _lang_label = "English" if cfg["lang"] == "es" else "Español"
-                    st.button(_lang_label, key="btn_lang", on_click=toggle_lang, use_container_width=True)
-                    # Presentation / tour
-                    st.button(t("Presentar"), key="btn_present", on_click=pres_start, use_container_width=True)
-                    st.button(t("Guía rápida"), key="btn_tour", on_click=tour_start, use_container_width=True)
-                    st.markdown("---")
-                    st.button(t("Restablecer ajustes"), key="reset_btn", on_click=do_reset, use_container_width=True)
+                    if st.session_state.get("seg_lang") != cfg["lang"]:
+                        st.session_state["seg_lang"] = cfg["lang"]
+                    st.segmented_control(
+                        t("Idioma"), ["es", "en"], key="seg_lang",
+                        format_func=lambda v: "ES" if v == "es" else "EN",
+                        on_change=lambda: ST.put("lang", st.session_state["seg_lang"]),
+                        label_visibility="visible",
+                    )
+                    # Theme (synced with header button)
+                    _theme_now = "dark" if dark else "light"
+                    if st.session_state.get("seg_theme") != _theme_now:
+                        st.session_state["seg_theme"] = _theme_now
+                    st.segmented_control(
+                        t("Tema"), ["light", "dark"], key="seg_theme",
+                        format_func=lambda v: t("Claro") if v == "light" else t("Oscuro"),
+                        on_change=lambda: ST.put("theme", st.session_state["seg_theme"]),
+                        label_visibility="visible",
+                    )
+                    st.html('<hr class="vk-menu-hr">')
+                    # ── ACTIONS ────────────────────────────────────────
+                    st.button(t("Presentar"), key="btn_present", on_click=pres_start,
+                              use_container_width=True)
+                    st.button(t("Guía rápida"), key="btn_tour", on_click=tour_start,
+                              use_container_width=True)
+                    # Restablecer ajustes with confirmation
+                    if not st.session_state.get("_reset_confirm"):
+                        st.button(
+                            t("Restablecer ajustes"), key="reset_btn",
+                            on_click=lambda: st.session_state.update({"_reset_confirm": True}),
+                            use_container_width=True,
+                        )
+                    else:
+                        st.markdown(f"**{t('¿Confirmar reinicio?')}**")
+                        _yes_col, _no_col = st.columns(2, gap="small")
+                        _yes_col.button(
+                            t("Sí, reiniciar"), key="reset_yes", type="primary",
+                            on_click=do_reset, use_container_width=True,
+                        )
+                        _no_col.button(
+                            t("Cancelar"), key="reset_no",
+                            on_click=lambda: st.session_state.pop("_reset_confirm", None),
+                            use_container_width=True,
+                        )
 
     st.html(ui.connector_html())
     st.html(ui.engine_html(ui.ANIM), unsafe_allow_javascript=True)
@@ -5844,6 +5894,8 @@ def main():
         section_datos()
     elif _page == "Noticias":
         section_noticias()
+        if adv():
+            section_senales()
     elif _page == "Señales":
         if adv():
             section_senales()
